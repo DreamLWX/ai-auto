@@ -144,6 +144,19 @@ def create_task():
     return jsonify({'message': 'Task created', 'task': task.to_dict()}), 201
 
 
+@tasks_bp.route('/<int:task_id>', methods=['GET'])
+@jwt_required()
+def get_task(task_id: int):
+    """获取单个任务"""
+    user_id = int(get_jwt_identity())
+    task = Task.query.get(task_id)
+    if not task:
+        return jsonify({'error': 'Task not found'}), 404
+    if task.user_id != user_id:
+        return jsonify({'error': 'Access denied'}), 403
+    return jsonify(task.to_dict()), 200
+
+
 # ==================== 更新任务 ====================
 
 @tasks_bp.route('/<int:task_id>', methods=['PUT'])

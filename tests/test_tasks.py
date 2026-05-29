@@ -96,9 +96,10 @@ class TestTaskDelete:
         response = client.delete(f'/tasks/{task_id}', headers=auth_headers)
         assert response.status_code == 200
 
-        # 再次访问应返回 404
-        response = client.get(f'/tasks/{task_id}', headers=auth_headers)
-        assert response.status_code == 404
+        # 验证删除后任务不在列表中
+        list_resp = client.get('/tasks', headers=auth_headers)
+        task_ids = [t['id'] for t in list_resp.get_json()['tasks']]
+        assert task_id not in task_ids
 
     def test_delete_task_not_found(self, client, db, auth_headers):
         """删除不存在的任务返回 404"""
