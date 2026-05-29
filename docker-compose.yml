@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-change-jwt-secret-in-production}
+      - JWT_ACCESS_TOKEN_EXPIRES=3600
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=sqlite:///instance/app.db
+    depends_on:
+      - redis
+    volumes:
+      # 持久化 SQLite 数据
+      - sqlite_data:/app/instance
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:
+  redis_data:
