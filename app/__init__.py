@@ -33,8 +33,26 @@ def create_app(config: dict = None) -> Flask:
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(
         seconds=int(os.getenv('JWT_ACCESS_TOKEN_EXPIRES', 3600))
     )
+    # 允许从 Cookie 或 Authorization 头读取 JWT
+    app.config['JWT_TOKEN_LOCATION'] = ('headers', 'cookies')
+    app.config['JWT_ACCESS_COOKIE_NAME'] = 'access_token_cookie'
+    app.config['JWT_ACCESS_COOKIE_PATH'] = '/'
 
-    # 自定义 JWT 验证回调：检查 token 是否在黑名单
+    # ==================== 初始化扩展 ====================
+    db.init_app(app)
+    jwt = JWTManager(app)
+
+    # ==================== 注册蓝图 ====================
+    from .auth import auth_bp
+    from .tasks import tasks_bp
+
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(tasks_bp)
+
+    from .auth import inject_current_user
+    app.context_processor(inject_current_user)
+
+    # 自定义 JWT 验证回调：检查 token 是否在黑名单（在蓝图注册后定义）
     from flask_jwt_extended import verify_jwt_in_request, get_jwt
 
     @app.before_request
@@ -50,22 +68,9 @@ def create_app(config: dict = None) -> Flask:
             except Exception:
                 pass
 
-    # ==================== 初始化扩展 ====================
-    db.init_app(app)
-    jwt = JWTManager(app)
-
+    # ==================== 初始化 Redis ====================
     redis_url = app.config.get('REDIS_URL', os.getenv('REDIS_URL', 'redis://localhost:6379/0'))
     init_redis(redis_url)
-
-    # ==================== 注册蓝图 ====================
-    from .auth import auth_bp
-    from .tasks import tasks_bp
-
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(tasks_bp)
-
-    from .auth import inject_current_user
-    app.context_processor(inject_current_user)
 
     # ==================== 创建数据库表 ====================
     with app.app_context():
