@@ -765,6 +765,29 @@ def edit_trip_page(trip_id: int):
     return render_template('trip_form.html', trip=trip)
 
 
+@trips_bp.route('/<int:trip_id>', methods=['GET'])
+def trip_detail_page(trip_id: int):
+    """行程详情页面"""
+    user_id = get_current_user_id_from_request()
+    if not user_id:
+        flash('请先登录', 'warning')
+        return redirect(url_for('auth.login'))
+
+    trip = Trip.query.get(trip_id)
+    if not trip:
+        flash('行程不存在', 'danger')
+        return redirect(url_for('trips.list_trips_page'))
+
+    if not can_view_trip(trip, user_id):
+        flash('无权限查看', 'danger')
+        return redirect(url_for('trips.list_trips_page'))
+
+    participants = TripParticipant.query.filter_by(trip_id=trip_id).all()
+    return render_template('trip_detail.html',
+                           trip=trip,
+                           participants=participants)
+
+
 @trips_bp.route('/mine/page', methods=['GET'])
 def my_trips_page():
     """我的行程页面（需登录）"""
