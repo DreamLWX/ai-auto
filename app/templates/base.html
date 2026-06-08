@@ -7,17 +7,22 @@
     <!-- Bootstrap 5 CDN -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     {% block extra_css %}{% endblock %}
+    <style>
+    body.no-navbar .navbar { display: none !important; }
+    body .container, body main {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+    .card-body {
+        padding: 1rem 1.25rem;
+    }
+    </style>
 </head>
-<body>
+<body {% block body_class %}{% endblock %}>
     <!-- 导航栏 -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('auth.login') }}">
-                <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="15" cy="15" r="15" fill="#6c757d"/>
-                    <text x="15" y="20" text-anchor="middle" fill="white" font-size="12" font-weight="bold">AI</text>
-                </svg>
-            </a>
+            <a class="navbar-brand" href="{{ url_for('auth.login') }}">TODO</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                     data-bs-target="#navbarNav" aria-controls="navbarNav"
                     aria-expanded="false" aria-label="Toggle navigation">
@@ -27,22 +32,11 @@
                 <ul class="navbar-nav ms-auto">
                     {% if current_user %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('tasks.list_tasks_page') }}">行程</a>
+                            <a class="nav-link" href="{{ url_for('trips.list_trips_page') }}">行程大厅</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('schedule.view_schedule') }}">时间表</a>
-                        </li>
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="tripsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                发布行程
-                            </a>
-                            <ul class="dropdown-menu" aria-labelledby="tripsDropdown">
-                                <li><a class="dropdown-item" href="{{ url_for('trips.list_trips_page') }}">行程大厅</a></li>
-                                <li><a class="dropdown-item" href="{{ url_for('trips.create_trip_page') }}">发布新行程</a></li>
-                            </ul>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('trips.my_trips_page') }}">我的行程</a>
+                        <li class="nav-item d-flex">
+                            <a class="nav-link btn btn-outline-secondary rounded-0 rounded-start {{ 'active' if request.endpoint == 'tasks.list_tasks_page' }}" href="{{ url_for('tasks.list_tasks_page') }}">行程</a>
+                            <a class="nav-link btn btn-outline-secondary rounded-0 rounded-end {{ 'active' if request.endpoint == 'schedule.view_schedule' }}" href="{{ url_for('schedule.view_schedule') }}">时间表</a>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
@@ -71,7 +65,7 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class="toast align-items-center text-white bg-{{ 'primary' if category == 'info' else category if category != 'message' else 'secondary' }} border-0 show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="1000">
+              <div class="toast align-items-center text-white bg-{{ 'primary' if category == 'info' else category if category != 'message' else 'secondary' }} border-0 show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="1500">
                   <div class="d-flex">
                       <div class="toast-body">
                           {{ message }}
@@ -84,7 +78,10 @@
         {% endwith %}
     </div>
 
-    {% block content %}{% endblock %}
+    {% block content %}
+<div style="max-width: 960px; margin: 0 auto; padding: 0 8px;">
+{% endblock %}
+</div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -92,7 +89,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             var toastElList = [].slice.call(document.querySelectorAll('.toast'));
             var toastList = toastElList.map(function(toastEl) {
-                return new bootstrap.Toast(toastEl, { delay: 1000 });
+                return new bootstrap.Toast(toastEl, { delay: 1500 });
             });
             toastList.forEach(toast => toast.show());
         });
