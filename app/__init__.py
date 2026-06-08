@@ -68,9 +68,12 @@ def create_app(config: dict = None) -> Flask:
             try:
                 verify_jwt_in_request()
                 jti = get_jwt()['jti']
-                redis_client = get_redis()
-                if redis_client.is_blacklisted(jti):
-                    return make_response(jsonify({'error': 'Token has been revoked'}), 401)
+                try:
+                    redis_client = get_redis()
+                    if redis_client.is_blacklisted(jti):
+                        return make_response(jsonify({'error': 'Token has been revoked'}), 401)
+                except Exception:
+                    pass
             except Exception:
                 pass
 

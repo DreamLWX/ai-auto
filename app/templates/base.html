@@ -12,7 +12,12 @@
     <!-- 导航栏 -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('auth.login') }}">AI-Todo Pro</a>
+            <a class="navbar-brand" href="{{ url_for('auth.login') }}">
+                <svg width="30" height="30" viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="15" cy="15" r="15" fill="#6c757d"/>
+                    <text x="15" y="20" text-anchor="middle" fill="white" font-size="12" font-weight="bold">AI</text>
+                </svg>
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
                     data-bs-target="#navbarNav" aria-controls="navbarNav"
                     aria-expanded="false" aria-label="Toggle navigation">
@@ -22,10 +27,10 @@
                 <ul class="navbar-nav ms-auto">
                     {% if current_user %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('tasks.list_tasks_page') }}">我的任务</a>
+                            <a class="nav-link" href="{{ url_for('tasks.list_tasks_page') }}">行程</a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('schedule.view_schedule') }}">课程表</a>
+                            <a class="nav-link" href="{{ url_for('schedule.view_schedule') }}">时间表</a>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="tripsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
@@ -39,8 +44,14 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('trips.my_trips_page') }}">我的行程</a>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('auth.logout') }}">登出</a>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
+                                <span style="font-size:1.2em;">👤</span>
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                                <li><a class="dropdown-item" href="{{ url_for('auth.profile') }}">个人信息</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}">登出</a></li>
+                            </ul>
                         </li>
                     {% else %}
                         <li class="nav-item">
@@ -55,22 +66,37 @@
         </div>
     </nav>
 
-    <!-- 消息闪现 -->
-    <div class="container mt-3">
+    <!-- Toast通知容器 -->
+    <div class="toast-container position-fixed top-50 start-50 translate-middle" style="z-index: 9999;">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                  {{ message }}
-                  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              <div class="toast align-items-center text-white bg-{{ 'primary' if category == 'info' else category if category != 'message' else 'secondary' }} border-0 show" role="alert" aria-live="assertive" aria-atomic="true" data-bs-autohide="true" data-bs-delay="1000">
+                  <div class="d-flex">
+                      <div class="toast-body">
+                          {{ message }}
+                      </div>
+                      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                  </div>
               </div>
             {% endfor %}
           {% endif %}
         {% endwith %}
-        {% block content %}{% endblock %}
     </div>
 
+    {% block content %}{% endblock %}
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 页面加载完成后初始化所有 toast
+        document.addEventListener('DOMContentLoaded', function() {
+            var toastElList = [].slice.call(document.querySelectorAll('.toast'));
+            var toastList = toastElList.map(function(toastEl) {
+                return new bootstrap.Toast(toastEl, { delay: 1000 });
+            });
+            toastList.forEach(toast => toast.show());
+        });
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

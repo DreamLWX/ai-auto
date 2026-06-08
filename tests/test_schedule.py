@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 
 class TestScheduleView:
-    """课程表页面测试"""
+    """时间表页面测试"""
 
     def test_schedule_requires_login(self, client):
         """未登录访问课程表应重定向到登录页"""
@@ -18,10 +18,10 @@ class TestScheduleView:
         """登录后访问课程表应正常加载"""
         response = client.get('/schedule', headers=auth_headers)
         assert response.status_code == 200
-        assert '课程表' in response.text
+        assert '时间表' in response.text
 
     def test_schedule_shows_tasks(self, client, db, auth_headers):
-        """课程表应显示用户的未完成任务"""
+        """时间表应显示用户的未完成任务"""
         # 通过 API 创建任务
         client.post('/tasks', headers=auth_headers, json={
             'title': '测试任务',
@@ -33,7 +33,7 @@ class TestScheduleView:
         assert '测试任务' in response.text
 
     def test_schedule_shows_trips(self, client, db, auth_headers):
-        """课程表应显示用户参与的行程"""
+        """时间表应显示用户参与的行程"""
         # 创建行程并参与
         trip_response = client.post('/trips', headers=auth_headers, json={
             'title': '测试行程',
@@ -47,7 +47,7 @@ class TestScheduleView:
 
 
 class TestScheduleItems:
-    """课程表数据项测试"""
+    """时间表数据项测试"""
 
     def test_get_schedule_items_tasks(self, app, client, db, auth_headers):
         """获取日程项应包含用户任务"""
@@ -114,8 +114,8 @@ class TestScheduleNavigation:
     """导航栏测试"""
 
     def test_nav_has_schedule_link(self, client, db, auth_headers):
-        """登录后导航栏应显示课程表链接"""
+        """登录后导航栏应显示时间表链接"""
         response = client.get('/schedule', headers=auth_headers)
         assert response.status_code == 200
-        # 导航栏应包含课程表链接
-        assert '课程表' in response.text
+        # 导航栏应包含时间表链接
+        assert '时间表' in response.text

@@ -75,7 +75,10 @@ def api_logout():
     """API: 登出（JSON）"""
     jti = get_jwt()['jti']
     expires_in = get_jwt()['exp'] - get_jwt()['iat']
-    get_redis().add_to_blacklist(jti, expires_in)
+    try:
+        get_redis().add_to_blacklist(jti, expires_in)
+    except Exception:
+        pass
     return jsonify({'message': 'Successfully logged out'}), 200
 
 
@@ -161,11 +164,49 @@ def logout():
         pass
 
     if jti:
-        get_redis().add_to_blacklist(jti, expires_in)
+        try:
+            get_redis().add_to_blacklist(jti, expires_in)
+        except Exception:
+            pass
 
     resp = redirect(url_for('auth.login'))
     flash('已退出登录', 'info')
     return resp
+
+
+@auth_bp.route('/forgot_password', methods=['GET', 'POST'])
+def forgot_password():
+    """忘记密码页面"""
+    if request.method == 'GET':
+        return render_template('forgot_password.html')
+    # POST just shows the same page with a message
+    flash('请联系管理员找回密码', 'info')
+    return render_template('forgot_password.html')
+
+
+@auth_bp.route('/profile', methods=['GET', 'POST'])
+def profile():
+    """个人信息页面（需登录）"""
+    user = g.get('current_user')
+    if not user:
+        flash('请先登录', 'warning')
+        return redirect(url_for('auth.login'))
+
+    if request.method == 'GET':
+        return render_template('profile.html', user=user)
+
+    # POST: 更新个人信息
+    nickname = request.form.get('nickname', '').strip()
+    gender = request.form.get('gender', '').strip()
+    contact = request.form.get('contact', '').strip()
+
+    user.nickname = nickname if nickname else None
+    user.gender = gender if gender else None
+    user.contact = contact if contact else None
+    db.session.commit()
+
+    flash('个人信息已更新', 'success')
+    return redirect(url_for('auth.profile'))
 
 
 # ==================== 模板上下文：current_user ====================

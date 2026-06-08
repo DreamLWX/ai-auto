@@ -306,7 +306,10 @@ def get_current_user_id():
     """从 JWT 获取当前用户 ID（无 JWT 时返回 None）"""
     try:
         verify_jwt_in_request(optional=True)
-        return int(_get_id())
+        identity = _get_id()
+        if identity is None:
+            return None
+        return int(identity)
     except Exception:
         return None
 

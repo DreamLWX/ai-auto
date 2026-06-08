@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}个人信息 - AI-Todo Pro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="card shadow">
+            <div class="card-body">
+                <h3 class="card-title text-center mb-4">个人信息</h3>
+                <form method="POST" action="{{ url_for('auth.profile') }}">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">用户名</label>
+                        <input type="text" class="form-control" id="username" value="{{ user.username }}" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nickname" class="form-label">昵称</label>
+                        <input type="text" class="form-control" id="nickname" name="nickname"
+                               value="{{ user.nickname or '' }}" placeholder="给自己起个昵称">
+                    </div>
+                    <div class="mb-3">
+                        <label for="gender" class="form-label">性别</label>
+                        <select class="form-control" id="gender" name="gender">
+                            <option value="">未选择</option>
+                            <option value="male" {% if user.gender == 'male' %}selected{% endif %}>男</option>
+                            <option value="female" {% if user.gender == 'female' %}selected{% endif %}>女</option>
+                            <option value="other" {% if user.gender == 'other' %}selected{% endif %}>其他</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="contact" class="form-label">联系方式</label>
+                        <input type="text" class="form-control" id="contact" name="contact"
+                               value="{{ user.contact or '' }}" placeholder="手机号或邮箱">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">保存</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

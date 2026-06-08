@@ -1,28 +1,25 @@
 {% extends "base.html" %}
 
-{% block title %}我的任务 - AI-Todo Pro{% endblock %}
+{% block title %}行程 - AI-Todo Pro{% endblock %}
 
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2 class="mb-4">我的任务</h2>
+        <h2 class="mb-4">行程</h2>
 
         <!-- 新建任务表单 -->
         <div class="card mb-4">
             <div class="card-body">
-                <h5 class="card-title">添加新任务</h5>
+                <h5 class="card-title">添加行程</h5>
                 <form method="POST" action="{{ url_for('tasks.create_task_page') }}">
                     <div class="row g-2">
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <input type="text" class="form-control" name="title"
-                                   placeholder="任务标题（必填）" required autofocus>
+                                   placeholder="行程标题（必填）" required autofocus>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-4">
                             <input type="text" class="form-control" name="description"
                                    placeholder="描述（可选）">
-                        </div>
-                        <div class="col-md-2">
-                            <input type="date" class="form-control" name="due_date">
                         </div>
                         <div class="col-md-auto">
                             <button type="submit" class="btn btn-primary">添加</button>
@@ -55,9 +52,6 @@
                     <tr>
                         <th style="width: 40px"><input class="form-check-input" type="checkbox" disabled></th>
                         <th>标题</th>
-                        <th>描述</th>
-                        <th>截止日期</th>
-                        <th>状态</th>
                         <th style="width: 180px">操作</th>
                     </tr>
                 </thead>
@@ -76,15 +70,6 @@
                                 {{ task.title }}
                             </span>
                         </td>
-                        <td class="text-muted small">{{ task.description or '-' }}</td>
-                        <td class="small">{{ task.due_date or '-' }}</td>
-                        <td>
-                            {% if task.completed %}
-                                <span class="badge bg-success">已完成</span>
-                            {% else %}
-                                <span class="badge bg-secondary">进行中</span>
-                            {% endif %}
-                        </td>
                         <td>
                             <form method="POST" action="{{ url_for('tasks.delete_task_page', task_id=task.id) }}"
                                   onsubmit="return confirm('确认删除？')">
@@ -94,8 +79,8 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-4">
-                            暂无任务，添加一个吧
+                        <td colspan="3" class="text-center text-muted py-4">
+                            暂无行程
                         </td>
                     </tr>
                     {% endfor %}

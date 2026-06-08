@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}课程表 - AI-Todo Pro{% endblock %}
+{% block title %}时间表 - AI-Todo Pro{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -77,27 +77,17 @@
 {% block content %}
 <div class="row">
     <div class="col-12">
-        <h2 class="mb-4">课程表</h2>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>时间表</h2>
+    <div class="btn-group" role="group">
+        <button type="button" class="btn btn-outline-primary active" id="btn-schedule" onclick="showView('schedule')">时间表</button>
+        <button type="button" class="btn btn-outline-secondary" id="btn-list" onclick="showView('list')">列表</button>
+    </div>
+    <a href="{{ url_for('trips.create_trip_page') }}" class="btn btn-primary">添加行程</a>
+</div>
 
-        <!-- Tab 切换 -->
-        <ul class="nav nav-tabs mb-3" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tasks-tab" data-bs-toggle="tab"
-                        data-bs-target="#tasks-panel" type="button" role="tab">
-                    任务列表
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="schedule-tab" data-bs-toggle="tab"
-                        data-bs-target="#schedule-panel" type="button" role="tab">
-                    课程表
-                </button>
-            </li>
-        </ul>
-
-        <div class="tab-content">
-            <!-- 任务列表 Tab -->
-            <div class="tab-pane fade" id="tasks-panel" role="tabpanel">
+        <!-- 任务列表 -->
+            <div id="tasks-panel" style="display: none;">
                 <div class="card">
                     <div class="card-body">
                         {% if tasks %}
@@ -126,14 +116,14 @@
                             </tbody>
                         </table>
                         {% else %}
-                        <p class="text-muted text-center py-4">暂无任务</p>
+                        <p class="text-muted text-center py-4">暂无行程</p>
                         {% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- 课程表 Tab -->
-            <div class="tab-pane fade show active" id="schedule-panel" role="tabpanel">
+            <!-- 时间表 -->
+            <div id="schedule-panel">
                 <div class="card">
                     <div class="card-body">
                         <div class="schedule-grid">
@@ -175,7 +165,6 @@
                     </div>
                 </div>
             </div>
-        </div>
     </div>
 </div>
 
@@ -202,7 +191,37 @@
 
 {% block extra_js %}
 <script>
+function showView(view) {
+    const schedulePanel = document.getElementById('schedule-panel');
+    const listPanel = document.getElementById('tasks-panel');
+    const btnSchedule = document.getElementById('btn-schedule');
+    const btnList = document.getElementById('btn-list');
+
+    if (view === 'schedule') {
+        schedulePanel.style.display = 'block';
+        listPanel.style.display = 'none';
+        btnSchedule.classList.add('active');
+        btnSchedule.classList.remove('btn-outline-secondary');
+        btnSchedule.classList.add('btn-outline-primary');
+        btnList.classList.remove('active');
+        btnList.classList.remove('btn-outline-primary');
+        btnList.classList.add('btn-outline-secondary');
+    } else {
+        schedulePanel.style.display = 'none';
+        listPanel.style.display = 'block';
+        btnList.classList.add('active');
+        btnList.classList.remove('btn-outline-secondary');
+        btnList.classList.add('btn-outline-primary');
+        btnSchedule.classList.remove('active');
+        btnSchedule.classList.remove('btn-outline-primary');
+        btnSchedule.classList.add('btn-outline-secondary');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Set default view
+    showView('schedule');
+
     //注入日程数据
     const scheduleItems = {{ schedule_items | tojson }};
 
@@ -271,23 +290,6 @@ document.addEventListener('DOMContentLoaded', function() {
             modal.show();
         });
     });
-
-    // Tab 切换逻辑
-    const urlParams = new URLSearchParams(window.location.search);
-    const tab = urlParams.get('tab');
-
-    function activateTab(tabId) {
-        const triggerEl = document.querySelector(tabId);
-        if (triggerEl) {
-            bootstrap.Tab.getOrCreateInstance(triggerEl).show();
-        }
-    }
-
-    if (tab === 'tasks') {
-        activateTab('#tasks-tab');
-    } else {
-        activateTab('#schedule-tab');
-    }
 });
 </script>
 {% endblock %}
