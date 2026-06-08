@@ -713,6 +713,58 @@ def create_trip_page():
     return render_template('trip_form.html', trip=None)
 
 
+@trips_bp.route('/<int:trip_id>/edit', methods=['GET', 'POST'])
+def edit_trip_page(trip_id: int):
+    """编辑行程页面"""
+    user_id = get_current_user_id_from_request()
+    if not user_id:
+        flash('请先登录', 'warning')
+        return redirect(url_for('auth.login'))
+
+    trip = Trip.query.get(trip_id)
+    if not trip:
+        flash('行程不存在', 'danger')
+        return redirect(url_for('trips.list_trips_page'))
+
+    # 只有创建者可以编辑
+    if trip.creator_id != user_id:
+        flash('无权限编辑', 'danger')
+        return redirect(url_for('trips.list_trips_page'))
+
+    if request.method == 'POST':
+        title = request.form.get('title', '').strip()
+        if not title:
+            flash('标题不能为空', 'danger')
+            return redirect(url_for('trips.edit_trip_page', trip_id=trip_id))
+
+        description = request.form.get('description', '').strip() or None
+        is_public = request.form.get('is_public') == 'on'
+        visibility = 'public' if is_public else 'private'
+        max_participants = request.form.get('max_participants', 10, type=int)
+        deadline_str = request.form.get('deadline', '').strip()
+
+        deadline = None
+        if deadline_str:
+            try:
+                deadline = datetime.strptime(deadline_str, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                flash('时间格式错误', 'danger')
+                return redirect(url_for('trips.edit_trip_page', trip_id=trip_id))
+
+        trip.title = title
+        trip.description = description
+        trip.is_private = not is_public
+        trip.visibility = visibility
+        trip.max_participants = max_participants
+        trip.deadline = deadline
+        db.session.commit()
+
+        flash('行程已更新', 'success')
+        return redirect(url_for('trips.list_trips_page'))
+
+    return render_template('trip_form.html', trip=trip)
+
+
 @trips_bp.route('/mine/page', methods=['GET'])
 def my_trips_page():
     """我的行程页面（需登录）"""
