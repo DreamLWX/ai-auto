@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}{{ trip.title }} - AI-Todo Pro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- 公开内容区 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h3 class="mb-1">{{ trip.title }}</h3>
+                        <p class="text-muted small mb-0">
+                            发起人：{{ trip.organizer_name }}
+                            {% if trip.trip_type == 'public' %}
+                                <span class="badge bg-success ms-2">公开招募</span>
+                            {% else %}
+                                <span class="badge bg-info ms-2">私人行程</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <h5>行程描述</h5>
+                <p>{{ trip.description }}</p>
+
+                <h5>公开信息</h5>
+                <p class="text-muted">{{ trip.public_description }}</p>
+
+                <div class="row g-3 mt-3">
+                    <div class="col-md-4">
+                        <p class="mb-1 text-muted small">人数条件</p>
+                        <p class="mb-0">{{ trip.min_participants }} - {{ trip.max_participants }} 人</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1 text-muted small">当前参与</p>
+                        <p class="mb-0">{{ trip.current_participants }} 人</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p class="mb-1 text-muted small">截止日期</p>
+                        <p class="mb-0">{{ trip.deadline or '无' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 隐藏内容区 -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">详细信息</h5>
+                {% if condition_met %}
+                    {% if is_organizer %}
+                        <h6 class="text-muted small mb-2">以下内容仅对发起人可见</h6>
+                        <div class="alert alert-info mb-0">
+                            <p class="mb-0 fst-italic">已有安排 - 详细安排信息</p>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-secondary mb-0">
+                            <p class="mb-0 text-muted">您已满足参与条件，可查看完整安排</p>
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <p class="text-muted mb-3">查看完整详情需满足人数条件</p>
+                        <a href="{{ url_for('trips.apply_trip_page', trip_id=trip.id) }}"
+                           class="btn btn-primary">
+                            申请加入
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- 申请表单（已登录且未申请） -->
+        {% if current_user and not has_applied and not is_organizer %}
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">申请参与此行程</h5>
+                <form method="POST" action="{{ url_for('trips.apply_trip_page', trip_id=trip.id) }}">
+                    <div class="mb-3">
+                        <label for="application_message" class="form-label">申请留言</label>
+                        <textarea class="form-control" id="application_message"
+                                  name="message" rows="3"
+                                  placeholder="简单介绍一下自己或说明申请理由..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">提交申请</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- 参与人列表 -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">参与人列表 ({{ trip.current_participants }}/{{ trip.max_participants }})</h5>
+                {% if participants %}
+                <ul class="list-group list-group-flush">
+                    {% for participant in participants %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>{{ participant.user_name }}</span>
+                        <span class="badge bg-success rounded-pill">已参与</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted mb-0">暂无参与人</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 侧边栏 -->
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">行程信息</h5>
+                <ul class="list-unstyled mb-0 small">
+                    <li class="mb-2">
+                        <strong>行程类型：</strong>
+                        {% if trip.trip_type == 'public' %}
+                            公开招募
+                        {% else %}
+                            私人行程
+                        {% endif %}
+                    </li>
+                    <li class="mb-2">
+                        <strong>触发条件：</strong>
+                        {{ trip.trigger_condition }}
+                    </li>
+                    <li class="mb-2">
+                        <strong>截止日期：</strong>
+                        {{ trip.deadline or '无' }}
+                    </li>
+                    <li class="mb-2">
+                        <strong>发布时间：</strong>
+                        {{ trip.created_at }}
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        {% if is_organizer %}
+        <div class="card mt-3">
+            <div class="card-body">
+                <h5 class="card-title">发起人操作</h5>
+                <a href="{{ url_for('trips.edit_trip_page', trip_id=trip.id) }}"
+                   class="btn btn-outline-primary btn-sm w-100 mb-2">
+                    编辑行程
+                </a>
+                <a href="{{ url_for('trips.manage_applications_page', trip_id=trip.id) }}"
+                   class="btn btn-outline-secondary btn-sm w-100">
+                    管理申请
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

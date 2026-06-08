@@ -11,7 +11,7 @@ os.environ['REDIS_URL'] = 'redis://localhost:6379/15'
 
 import fakeredis
 from app import create_app
-from app.models import db as _db, User, Task
+from app.models import db as _db, User, Task, Trip, TripApplication, TripParticipant
 from app.redis_client import RedisClient
 from app import redis_client as redis_mod
 
@@ -54,6 +54,9 @@ def db(app, redis_client):
     _fake_redis.flushall()
     with app.app_context():
         yield _db.session
+        _db.session.query(TripParticipant).delete()
+        _db.session.query(TripApplication).delete()
+        _db.session.query(Trip).delete()
         _db.session.query(Task).delete()
         _db.session.query(User).delete()
         _db.session.commit()

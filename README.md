@@ -82,6 +82,53 @@ python run.py
 | DELETE | `/tasks/<id>` | 删除任务 |
 | PATCH | `/tasks/<id>/complete` | 切换完成状态 |
 
+### 好友系统接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/friends/<user_id>/follow` | 关注用户 |
+| POST | `/friends/<user_id>/unfollow` | 取关 |
+| GET | `/friends/requests` | 获取待处理的好友请求 |
+| POST | `/friends/<user_id>/accept` | 接受关注（互相关注则成为好友） |
+| POST | `/friends/<user_id>/reject` | 拒绝关注 |
+| GET | `/friends/list` | 获取好友列表（互相关注的） |
+| GET | `/friends/followers` | 获取粉丝列表 |
+| GET | `/friends/following` | 获取关注列表 |
+
+### 行程系统接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/trips` | 获取行程列表（大厅，仅公开行程） |
+| POST | `/trips` | 创建行程 |
+| GET | `/trips/<id>` | 获取行程详情 |
+| PUT | `/trips/<id>` | 更新行程（仅创建者） |
+| DELETE | `/trips/<id>` | 删除行程（仅创建者） |
+| POST | `/trips/<id>/apply` | 申请加入行程 |
+| GET | `/trips/<id>/applications` | 获取申请列表（仅创建者） |
+| POST | `/trips/<id>/applications/<app_id>/approve` | 审批通过 |
+| POST | `/trips/<id>/applications/<app_id>/reject` | 审批拒绝 |
+| GET | `/trips/mine` | 获取我发布和参与的行程 |
+
+行程支持以下字段：
+- `title`（必填）：行程标题
+- `description`：行程描述
+- `is_private`：是否私人行程
+- `visibility`：可见性（public/friends/private）
+- `min_participants`/`max_participants`：最小/最大参与人数
+- `deadline`：报名截止时间（ISO 格式）
+- `trigger_condition`：触发条件（auto 自动审批/manual手动审批）
+- `public_content`/`hidden_content`：公开/隐藏内容
+
+### 课程表视图接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/schedule` | 获取课程表视图（合并任务和行程） |
+| GET | `/schedule/items` | 获取日程项目列表（未完成的任务 + 即将开始的行程） |
+
+课程表视图会自动合并用户的待办任务和行程，展示统一的时间线视图。
+
 ## Docker 部署
 
 ```bash
@@ -110,19 +157,31 @@ pytest tests/ -v
 ai-auto/
 ├── app/
 │   ├── __init__.py      # Flask 应用工厂
-│   ├── models.py         # User / Task 模型
+│   ├── models.py         # User / Task / Friendship / Trip 模型
 │   ├── auth.py           # 认证路由（API + Web）
 │   ├── tasks.py          # 任务路由（API + Web）
+│   ├── friendships.py    # 好友系统路由（API）
+│   ├── trips.py          # 行程系统路由（API）
+│   ├── schedule.py       # 课程表视图路由
 │   ├── redis_client.py   # Redis 客户端封装
 │   └── templates/        # Jinja2 模板
 │       ├── base.html
 │       ├── login.html
 │       ├── register.html
-│       └── tasks.html
+│       ├── tasks.html
+│       ├── schedule.html # 课程表视图
+│       ├── trips.html      # 行程大厅
+│       ├── trip_detail.html # 行程详情
+│       ├── trip_form.html  # 发布/编辑行程表单
+│       ├── my_trips.html   # 我的行程
+│       └── applications.html # 行程申请列表
 ├── tests/
 │   ├── conftest.py       # pytest fixtures
 │   ├── test_auth.py
 │   ├── test_tasks.py
+│   ├── test_friendships.py
+│   ├── test_trips.py
+│   ├── test_schedule.py
 │   └── test_cache.py
 ├── .github/workflows/test.yml
 ├── Dockerfile

@@ -25,6 +25,21 @@
                             <a class="nav-link" href="{{ url_for('tasks.list_tasks_page') }}">我的任务</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('schedule.view_schedule') }}">课程表</a>
+                        </li>
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle" href="#" id="tripsDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                发布行程
+                            </a>
+                            <ul class="dropdown-menu" aria-labelledby="tripsDropdown">
+                                <li><a class="dropdown-item" href="{{ url_for('trips.list_trips_page') }}">行程大厅</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('trips.create_trip_page') }}">发布新行程</a></li>
+                            </ul>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('trips.my_trips_page') }}">我的行程</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('auth.logout') }}">登出</a>
                         </li>
                     {% else %}

@@ -45,9 +45,15 @@ def create_app(config: dict = None) -> Flask:
     # ==================== 注册蓝图 ====================
     from .auth import auth_bp
     from .tasks import tasks_bp
+    from .friendships import friends_bp
+    from .trips import trips_bp
+    from .schedule import schedule_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
+    app.register_blueprint(friends_bp)
+    app.register_blueprint(trips_bp)
+    app.register_blueprint(schedule_bp)
 
     from .auth import inject_current_user
     app.context_processor(inject_current_user)

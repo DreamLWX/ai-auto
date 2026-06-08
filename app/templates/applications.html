@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}申请审批 - AI-Todo Pro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>申请审批 - {{ trip.title }}</h2>
+            <a href="{{ url_for('trips.trip_detail_page', trip_id=trip.id) }}"
+               class="btn btn-outline-secondary btn-sm">
+                返回行程详情
+            </a>
+        </div>
+
+        <!-- 行程信息摘要 -->
+        <div class="card mb-4">
+            <div class="card-body py-3">
+                <div class="row g-3 mb-0 small">
+                    <div class="col-md-3">
+                        <strong>行程类型：</strong>
+                        {% if trip.trip_type == 'public' %}
+                            公开招募
+                        {% else %}
+                            私人行程
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>人数条件：</strong>
+                        {{ trip.min_participants }} - {{ trip.max_participants }} 人
+                    </div>
+                    <div class="col-md-3">
+                        <strong>当前参与：</strong>
+                        {{ trip.current_participants }} 人
+                    </div>
+                    <div class="col-md-3">
+                        <strong>触发条件：</strong>
+                        {{ trip.trigger_condition }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 切换 -->
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="pending-tab" data-bs-toggle="tab"
+                        data-bs-target="#pending-panel" type="button" role="tab">
+                    待审批
+                    {% if pending_applications %}
+                        <span class="badge bg-danger">{{ pending_applications|length }}</span>
+                    {% endif %}
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="approved-tab" data-bs-toggle="tab"
+                        data-bs-target="#approved-panel" type="button" role="tab">
+                    已通过
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="rejected-tab" data-bs-toggle="tab"
+                        data-bs-target="#rejected-panel" type="button" role="tab">
+                    已拒绝
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- 待审批 -->
+            <div class="tab-pane fade show active" id="pending-panel" role="tabpanel">
+                {% if pending_applications %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>申请人</th>
+                                <th>申请时间</th>
+                                <th>留言</th>
+                                <th style="width: 200px">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in pending_applications %}
+                            <tr>
+                                <td>{{ app.applicant_name }}</td>
+                                <td>{{ app.created_at }}</td>
+                                <td class="text-muted small">{{ app.message or '-' }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('trips.approve_application_page', application_id=app.id) }}"
+                                          class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success">通过</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('trips.reject_application_page', application_id=app.id) }}"
+                                          class="d-inline" onsubmit="return confirm('确认拒绝？')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">拒绝</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">暂无待审批的申请</p>
+                {% endif %}
+            </div>
+
+            <!-- 已通过 -->
+            <div class="tab-pane fade" id="approved-panel" role="tabpanel">
+                {% if approved_applications %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>申请人</th>
+                                <th>通过时间</th>
+                                <th>留言</th>
+                                <th style="width: 100px">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in approved_applications %}
+                            <tr>
+                                <td>{{ app.applicant_name }}</td>
+                                <td>{{ app.updated_at }}</td>
+                                <td class="text-muted small">{{ app.message or '-' }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('trips.reject_application_page', application_id=app.id) }}"
+                                          class="d-inline" onsubmit="return confirm('确认取消资格？')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger btn-sm">取消资格</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">暂无已通过的申请</p>
+                {% endif %}
+            </div>
+
+            <!-- 已拒绝 -->
+            <div class="tab-pane fade" id="rejected-panel" role="tabpanel">
+                {% if rejected_applications %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>申请人</th>
+                                <th>拒绝时间</th>
+                                <th>留言</th>
+                                <th style="width: 100px">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in rejected_applications %}
+                            <tr>
+                                <td>{{ app.applicant_name }}</td>
+                                <td>{{ app.updated_at }}</td>
+                                <td class="text-muted small">{{ app.message or '-' }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('trips.approve_application_page', application_id=app.id) }}"
+                                          class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary btn-sm">重新通过</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">暂无已拒绝的申请</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

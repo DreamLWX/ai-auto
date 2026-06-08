@@ -1,0 +1,293 @@
+{% extends "base.html" %}
+
+{% block title %}课程表 - AI-Todo Pro{% endblock %}
+
+{% block extra_css %}
+<style>
+    .schedule-grid {
+        display: grid;
+        grid-template-columns: 80px repeat(7, 1fr);
+        grid-template-rows: 50px repeat(17, 40px);
+        border: 1px solid #dee2e6;
+        font-size: 12px;
+    }
+    .schedule-header {
+        background: #f8f9fa;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #dee2e6;
+        padding: 4px;
+    }
+    .schedule-time {
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #dee2e6;
+        color: #6c757d;
+        font-size: 11px;
+    }
+    .schedule-cell {
+        border: 1px solid #dee2e6;
+        padding: 2px 4px;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .schedule-cell:hover {
+        opacity: 0.85;
+    }
+    /* 公开招募 */
+    .cell-public {
+        border-color: #4caf50 !important;
+        border-width: 2px;
+        background-color: #e8f5e9;
+    }
+    /* 私人行程 */
+    .cell-private {
+        border-color: #2196f3 !important;
+        border-width: 2px;
+        background-color: #e3f2fd;
+    }
+    /* 已满/已安排 */
+    .cell-full {
+        border-color: #ff9800 !important;
+        border-width: 2px;
+        background-color: #fff3e0;
+    }
+    .cell-content {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+    }
+    .cell-icon {
+        margin-right: 2px;
+    }
+    .cell-meta {
+        font-size: 10px;
+        color: #666;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">课程表</h2>
+
+        <!-- Tab 切换 -->
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="tasks-tab" data-bs-toggle="tab"
+                        data-bs-target="#tasks-panel" type="button" role="tab">
+                    任务列表
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="schedule-tab" data-bs-toggle="tab"
+                        data-bs-target="#schedule-panel" type="button" role="tab">
+                    课程表
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- 任务列表 Tab -->
+            <div class="tab-pane fade" id="tasks-panel" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        {% if tasks %}
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr>
+                                    <th>标题</th>
+                                    <th>截止日期</th>
+                                    <th>状态</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                <tr>
+                                    <td>{{ task.title }}</td>
+                                    <td>{{ task.due_date or '-' }}</td>
+                                    <td>
+                                        {% if task.completed %}
+                                            <span class="badge bg-success">已完成</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">进行中</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <p class="text-muted text-center py-4">暂无任务</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 课程表 Tab -->
+            <div class="tab-pane fade show active" id="schedule-panel" role="tabpanel">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="schedule-grid">
+                            <!-- 表头 -->
+                            <div class="schedule-header"></div>
+                            <div class="schedule-header">周一</div>
+                            <div class="schedule-header">周二</div>
+                            <div class="schedule-header">周三</div>
+                            <div class="schedule-header">周四</div>
+                            <div class="schedule-header">周五</div>
+                            <div class="schedule-header">周六</div>
+                            <div class="schedule-header">周日</div>
+
+                            <!-- 时间行 -->
+                            {% for hour in range(6, 23) %}
+                            <div class="schedule-time">{{ '%02d:00' | format(hour) }}</div>
+                            {% for day in range(7) %}
+                            <div class="schedule-cell"
+                                 data-day="{{ day }}"
+                                 data-hour="{{ hour }}"
+                                 id="cell-{{ day }}-{{ hour }}">
+                            </div>
+                            {% endfor %}
+                            {% endfor %}
+                        </div>
+
+                        <!-- 图例 -->
+                        <div class="mt-3 d-flex gap-4">
+                            <span>
+                                <span style="color:#4caf50">&#11044;</span> 公开招募
+                            </span>
+                            <span>
+                                <span style="color:#2196f3">&#11044;</span> 私人行程
+                            </span>
+                            <span>
+                                <span style="color:#ff9800">&#11044;</span> 已满/已安排
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 详情 Modal -->
+<div class="modal fade" id="scheduleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">详情</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="modalContent"></p>
+                <p class="text-muted small" id="modalMeta"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                <button type="button" class="btn btn-primary" id="modalAction">申请</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    //注入日程数据
+    const scheduleItems = {{ schedule_items | tojson }};
+
+    scheduleItems.forEach(function(item) {
+        const cell = document.getElementById('cell-' + item.day + '-' + item.hour);
+        if (!cell) return;
+
+        let cssClass = 'cell-public';
+        let icon = '&#128101;';  // 👥
+        if (item.type === 'trip_private') {
+            cssClass = 'cell-private';
+            icon = '&#128274;';  // 🔒
+        } else if (item.type === 'trip_full') {
+            cssClass = 'cell-full';
+            icon = '&#9989;';  // ✅
+        }
+
+        cell.classList.add(cssClass);
+        cell.setAttribute('data-title', item.title);
+        cell.setAttribute('data-deadline', item.deadline || '');
+        cell.setAttribute('data-type', item.type);
+        cell.setAttribute('data-id', item.id);
+
+        let metaText = '';
+        if (item.type === 'trip_public' || item.type === 'trip_private' || item.type === 'trip_full') {
+            metaText = item.participant_count + '/' + item.max_participants + '人';
+        } else if (item.deadline) {
+            metaText = item.deadline;
+        }
+
+        cell.innerHTML = '<div class="cell-content"><span class="cell-icon">' + icon + '</span>' +
+                         '<span>' + item.title + '</span></div>' +
+                         '<div class="cell-meta">' + metaText + '</div>';
+
+        // Tooltip
+        cell.setAttribute('title', item.title + '\n' + (item.deadline || ''));
+    });
+
+    // 点击格子弹出 Modal
+    document.querySelectorAll('.schedule-cell').forEach(function(cell) {
+        cell.addEventListener('click', function() {
+            const title = cell.getAttribute('data-title');
+            const deadline = cell.getAttribute('data-deadline');
+            const type = cell.getAttribute('data-type');
+            const id = cell.getAttribute('data-id');
+
+            if (!title) return;
+
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalContent').textContent = '类型：' + type;
+            document.getElementById('modalMeta').textContent = deadline ? '截止时间：' + deadline : '';
+
+            // 显示/隐藏申请按钮（仅对公开招募行程显示）
+            const actionBtn = document.getElementById('modalAction');
+            if (type === 'trip_public') {
+                actionBtn.style.display = 'block';
+                actionBtn.textContent = '申请参加';
+                actionBtn.onclick = function() {
+                    alert('申请功能开发中');
+                };
+            } else {
+                actionBtn.style.display = 'none';
+            }
+
+            const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+            modal.show();
+        });
+    });
+
+    // Tab 切换逻辑
+    const urlParams = new URLSearchParams(window.location.search);
+    const tab = urlParams.get('tab');
+
+    function activateTab(tabId) {
+        const triggerEl = document.querySelector(tabId);
+        if (triggerEl) {
+            bootstrap.Tab.getOrCreateInstance(triggerEl).show();
+        }
+    }
+
+    if (tab === 'tasks') {
+        activateTab('#tasks-tab');
+    } else {
+        activateTab('#schedule-tab');
+    }
+});
+</script>
+{% endblock %}

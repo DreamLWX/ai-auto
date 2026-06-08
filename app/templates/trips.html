@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}行程大厅 - AI-Todo Pro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>行程大厅</h2>
+            {% if current_user %}
+            <a href="{{ url_for('trips.create_trip_page') }}" class="btn btn-primary">
+                发布行程
+            </a>
+            {% endif %}
+        </div>
+
+        <!-- 筛选栏 -->
+        <div class="mb-4">
+            <a href="{{ url_for('trips.list_trips_page') }}"
+               class="btn btn-sm {% if not filter_type %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                全部
+            </a>
+            <a href="{{ url_for('trips.list_trips_page', filter_type='public') }}"
+               class="btn btn-sm {% if filter_type == 'public' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                公开招募
+            </a>
+            <a href="{{ url_for('trips.list_trips_page', filter_type='private') }}"
+               class="btn btn-sm {% if filter_type == 'private' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+                私人行程
+            </a>
+        </div>
+
+        <!-- 行程卡片列表 -->
+        {% if trips %}
+        <div class="row g-3">
+            {% for trip in trips %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h5 class="card-title mb-0">{{ trip.title }}</h5>
+                            {% if trip.trip_type == 'public' %}
+                                <span class="badge bg-success">公开招募</span>
+                            {% else %}
+                                <span class="badge bg-info">私人行程</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-muted small mb-2">
+                            发起人：{{ trip.organizer_name }}
+                        </p>
+                        <p class="card-text small">{{ trip.public_description[:80] }}{% if trip.public_description|length > 80 %}...{% endif %}</p>
+                        <div class="d-flex justify-content-between align-items-center small">
+                            <span class="text-muted">
+                                {{ trip.current_participants }}/{{ trip.max_participants }} 人
+                            </span>
+                            {% if trip.deadline %}
+                                <span class="text-muted">
+                                    截止：{{ trip.deadline }}
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <a href="{{ url_for('trips.trip_detail_page', trip_id=trip.id) }}"
+                           class="btn btn-sm btn-outline-primary w-100">
+                            查看详情
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <p>暂无行程</p>
+            {% if current_user %}
+            <a href="{{ url_for('trips.create_trip_page') }}" class="btn btn-primary">
+                发布第一个行程
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- 分页 -->
+        {% if total_pages > 1 %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% for p in range(1, total_pages + 1) %}
+                    <li class="page-item {% if p == current_page %}active{% endif %}">
+                        <a class="page-link"
+                           href="{{ url_for('trips.list_trips_page', page=p, filter_type=filter_type) }}">
+                            {{ p }}
+                        </a>
+                    </li>
+                {% endfor %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

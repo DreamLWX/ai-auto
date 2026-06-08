@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}我的行程 - AI-Todo Pro{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">我的行程</h2>
+
+        <!-- Tab 切换 -->
+        <ul class="nav nav-tabs mb-3" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="organized-tab" data-bs-toggle="tab"
+                        data-bs-target="#organized-panel" type="button" role="tab">
+                    我发布的行程
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="participating-tab" data-bs-toggle="tab"
+                        data-bs-target="#participating-panel" type="button" role="tab">
+                    我参与的行程
+                </button>
+            </li>
+            {% if pending_applications %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="applications-tab" data-bs-toggle="tab"
+                        data-bs-target="#applications-panel" type="button" role="tab">
+                    待审批的申请
+                    <span class="badge bg-danger">{{ pending_applications|length }}</span>
+                </button>
+            </li>
+            {% endif %}
+        </ul>
+
+        <div class="tab-content">
+            <!-- 我发布的行程 -->
+            <div class="tab-pane fade show active" id="organized-panel" role="tabpanel">
+                {% if organized_trips %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>标题</th>
+                                <th>类型</th>
+                                <th>人数</th>
+                                <th>截止日期</th>
+                                <th>状态</th>
+                                <th style="width: 200px">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trip in organized_trips %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('trips.trip_detail_page', trip_id=trip.id) }}">
+                                        {{ trip.title }}
+                                    </a>
+                                </td>
+                                <td>
+                                    {% if trip.trip_type == 'public' %}
+                                        <span class="badge bg-success">公开招募</span>
+                                    {% else %}
+                                        <span class="badge bg-info">私人行程</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ trip.current_participants }}/{{ trip.max_participants }}</td>
+                                <td>{{ trip.deadline or '-' }}</td>
+                                <td>
+                                    {% if trip.is_active %}
+                                        <span class="badge bg-success">进行中</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">已结束</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('trips.edit_trip_page', trip_id=trip.id) }}"
+                                       class="btn btn-sm btn-outline-primary">编辑</a>
+                                    <a href="{{ url_for('trips.manage_applications_page', trip_id=trip.id) }}"
+                                       class="btn btn-sm btn-outline-secondary">申请</a>
+                                    <form method="POST" action="{{ url_for('trips.delete_trip_page', trip_id=trip.id) }}"
+                                          class="d-inline" onsubmit="return confirm('确认删除？')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">您还没有发布任何行程</p>
+                {% endif %}
+            </div>
+
+            <!-- 我参与的行程 -->
+            <div class="tab-pane fade" id="participating-panel" role="tabpanel">
+                {% if participating_trips %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>标题</th>
+                                <th>发起人</th>
+                                <th>人数</th>
+                                <th>截止日期</th>
+                                <th>我的状态</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for trip in participating_trips %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('trips.trip_detail_page', trip_id=trip.id) }}">
+                                        {{ trip.title }}
+                                    </a>
+                                </td>
+                                <td>{{ trip.organizer_name }}</td>
+                                <td>{{ trip.current_participants }}/{{ trip.max_participants }}</td>
+                                <td>{{ trip.deadline or '-' }}</td>
+                                <td>
+                                    {% if trip.participation_status == 'approved' %}
+                                        <span class="badge bg-success">已参与</span>
+                                    {% elif trip.participation_status == 'pending' %}
+                                        <span class="badge bg-warning">待审批</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">未知</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted text-center py-4">您还没有参与任何行程</p>
+                {% endif %}
+            </div>
+
+            <!-- 待审批的申请 -->
+            {% if pending_applications %}
+            <div class="tab-pane fade" id="applications-panel" role="tabpanel">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>申请人</th>
+                                <th>行程</th>
+                                <th>申请时间</th>
+                                <th>留言</th>
+                                <th style="width: 150px">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for app in pending_applications %}
+                            <tr>
+                                <td>{{ app.applicant_name }}</td>
+                                <td>
+                                    <a href="{{ url_for('trips.trip_detail_page', trip_id=app.trip_id) }}">
+                                        {{ app.trip_title }}
+                                    </a>
+                                </td>
+                                <td>{{ app.created_at }}</td>
+                                <td class="text-muted small">{{ app.message or '-' }}</td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('trips.approve_application_page', application_id=app.id) }}"
+                                          class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-success">通过</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('trips.reject_application_page', application_id=app.id) }}"
+                                          class="d-inline" onsubmit="return confirm('确认拒绝？')">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">拒绝</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
