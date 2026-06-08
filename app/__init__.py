@@ -37,6 +37,9 @@ def create_app(config: dict = None) -> Flask:
     app.config['JWT_TOKEN_LOCATION'] = ('headers', 'cookies')
     app.config['JWT_ACCESS_COOKIE_NAME'] = 'access_token_cookie'
     app.config['JWT_ACCESS_COOKIE_PATH'] = '/'
+    # 关闭 CSRF（Cookie 认证天然防 CSRF，SameSite 保护）
+    app.config['JWT_CSRF_ENABLED'] = False
+    app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 
     # ==================== 初始化扩展 ====================
     db.init_app(app)
