@@ -34,9 +34,11 @@
                         <li class="nav-item">
                             <a class="nav-link" href="{{ url_for('trips.list_trips_page') }}">行程大厅</a>
                         </li>
-                        <li class="nav-item d-flex">
-                            <a class="nav-link btn btn-outline-secondary rounded-0 rounded-start {{ 'active' if request.endpoint == 'tasks.list_tasks_page' }}" href="{{ url_for('tasks.list_tasks_page') }}">行程</a>
-                            <a class="nav-link btn btn-outline-secondary rounded-0 rounded-end {{ 'active' if request.endpoint == 'schedule.view_schedule' }}" href="{{ url_for('schedule.view_schedule') }}">时间表</a>
+                        <li class="nav-item">
+                            <div class="btn-group">
+                                <a class="nav-link btn btn-sm {{ 'btn-primary' if request.endpoint == 'tasks.list_tasks_page' else 'btn-outline-light' }}" href="{{ url_for('tasks.list_tasks_page') }}">行程</a>
+                                <a class="nav-link btn btn-sm {{ 'btn-primary' if request.endpoint == 'schedule.view_schedule' else 'btn-outline-light' }}" href="{{ url_for('schedule.view_schedule') }}">时间表</a>
+                            </div>
                         </li>
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown">
