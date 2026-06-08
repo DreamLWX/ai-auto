@@ -7,9 +7,24 @@ from flask import Blueprint, request, jsonify, render_template, redirect, url_fo
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import or_, and_
 
-from .models import db, Trip, TripApplication, TripParticipant
+from .models import db, Trip, TripApplication, TripParticipant, Friendship
 
 trips_bp = Blueprint('trips', __name__, url_prefix='/trips')
+
+
+def is_mutual_friend(user_id1, user_id2):
+    """检查两个用户是否互相关注（双向好友）"""
+    friendship1 = Friendship.query.filter_by(
+        follower_id=user_id1,
+        followed_id=user_id2,
+        status='accepted'
+    ).first()
+    friendship2 = Friendship.query.filter_by(
+        follower_id=user_id2,
+        followed_id=user_id1,
+        status='accepted'
+    ).first()
+    return friendship1 is not None and friendship2 is not None
 
 
 def can_view_trip(trip, user_id):
@@ -18,8 +33,8 @@ def can_view_trip(trip, user_id):
         if trip.visibility == 'public':
             return True
         if trip.visibility == 'friends':
-            # TODO: 检查是否为好友关系
-            return True
+            # 检查是否为好友关系（互相关注）
+            return is_mutual_friend(trip.creator_id, user_id)
     # 私人行程：只有创建者或参与者可以查看
     if trip.creator_id == user_id:
         return True
@@ -541,8 +556,10 @@ def list_trips_page():
     query = Trip.query.filter_by(is_private=False)
     if filter_type == 'public':
         query = query.filter_by(visibility='public')
-    elif filter_type == 'private':
+    elif filter_type == 'friends':
         query = query.filter_by(visibility='friends')
+    elif filter_type == 'private':
+        query = query.filter_by(visibility='private')
 
     query = query.order_by(Trip.created_at.desc())
     per_page = 10

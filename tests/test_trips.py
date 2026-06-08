@@ -418,11 +418,27 @@ class TestTripPrivacy:
         response = client.get(f'/trips/{trip_id}', headers=headers_b)
         assert response.status_code == 200
 
-    def test_friends_trip_visible_to_all(self, client, db, auth_headers):
-        """friends 可见性的行程对所有人可见（简化实现）"""
-        create_resp = client.post('/trips', headers=auth_headers,
-            json={'title': '好友行程', 'visibility': 'friends'})
+    def test_friends_trip_visible_to_mutual_friends_only(self, client, db, two_users):
+        """friends 可见性的行程仅对互相关注的好友可见"""
+        headers_a, headers_b = two_users
+
+        # alice 创建一个 friends 可见性的行程
+        create_resp = client.post('/trips', headers=headers_a,
+            json={'title': '好友行程', 'visibility': 'friends', 'is_private': False})
         trip_id = create_resp.get_json()['trip']['id']
 
-        response = client.get(f'/trips/{trip_id}', headers=auth_headers)
+        # bob (非好友) 不能查看
+        response = client.get(f'/trips/{trip_id}', headers=headers_b)
+        assert response.status_code == 403
+
+        # 互相关注成为好友：bob 关注 alice，alice 也关注 bob，然后互相接受
+        client.post('/friends/1/follow', headers=headers_b)
+        client.post('/friends/2/follow', headers=headers_a)
+        # alice 接受 bob (user 2) 的关注
+        client.post('/friends/2/accept', headers=headers_a)
+        # bob 接受 alice (user 1) 的关注
+        client.post('/friends/1/accept', headers=headers_b)
+
+        # 现在 bob 可以查看
+        response = client.get(f'/trips/{trip_id}', headers=headers_b)
         assert response.status_code == 200
