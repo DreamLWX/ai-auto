@@ -226,6 +226,30 @@ def load_logged_in_user():
         pass
 
 
+class UserContext:
+    """用户上下文包装器，提供 is_authenticated 等 Flask-Login 兼容属性"""
+    def __init__(self, user):
+        self._user = user
+
+    @property
+    def is_authenticated(self):
+        return self._user is not None
+
+    @property
+    def is_active(self):
+        return self._user is not None
+
+    @property
+    def is_anonymous(self):
+        return self._user is None
+
+    def __getattr__(self, name):
+        if self._user:
+            return getattr(self._user, name)
+        raise AttributeError(f"'{type(self).__name__}' has no attribute '{name}'")
+
+
 def inject_current_user():
     """在所有模板中注入 current_user 全局变量"""
-    return dict(current_user=g.get('current_user'))
+    user = g.get('current_user')
+    return dict(current_user=UserContext(user) if user else None)

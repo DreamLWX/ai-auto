@@ -7,7 +7,7 @@ from flask import Blueprint, request, jsonify, render_template, redirect, url_fo
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import or_, and_
 
-from .models import db, Trip, TripApplication, TripParticipant, Friendship
+from .models import db, Trip, TripApplication, TripParticipant, Friendship, Task
 
 trips_bp = Blueprint('trips', __name__, url_prefix='/trips')
 
@@ -53,6 +53,71 @@ def is_creator(trip_id, user_id):
     return trip and trip.creator_id == user_id
 
 
+def get_current_user_id_from_request():
+    """从请求中获取当前用户ID（支持 JWT 或 session）"""
+    from flask import session
+    from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
+
+    # 优先尝试 JWT
+    try:
+        verify_jwt_in_request(optional=True)
+        identity = get_jwt_identity()
+        if identity:
+            return int(identity)
+    except Exception:
+        pass
+
+    # 其次尝试 session
+    if 'user_id' in session:
+        return session['user_id']
+
+    return None
+
+
+def get_user_conflicts(user_id: int, deadline: datetime) -> list:
+    """
+    获取与指定 deadline 冲突的用户日程（任务和行程）
+    冲突定义：deadline 在用户已有行程/任务的 ±2 小时内
+    """
+    if not deadline:
+        return []
+
+    from datetime import timedelta
+    conflict_window = timedelta(hours=2)
+    conflict_start = deadline - conflict_window
+    conflict_end = deadline + conflict_window
+
+    conflicts = []
+
+    # 检查用户任务
+    tasks = Task.query.filter_by(user_id=user_id, completed=False).all()
+    for task in tasks:
+        if task.due_date:
+            task_dt = datetime.combine(task.due_date, datetime.min.time())
+            if conflict_start <= task_dt <= conflict_end:
+                conflicts.append({
+                    'type': 'task',
+                    'id': task.id,
+                    'title': task.title,
+                    'deadline': task.due_date.isoformat()
+                })
+
+    # 检查用户行程
+    participations = TripParticipant.query.filter_by(user_id=user_id).all()
+    for p in participations:
+        trip = p.trip
+        if trip and trip.deadline:
+            if conflict_start <= trip.deadline <= conflict_end:
+                conflicts.append({
+                    'type': 'trip',
+                    'id': trip.id,
+                    'title': trip.title,
+                    'deadline': trip.deadline.isoformat()
+                })
+
+    return conflicts
+
+
 # ==================== 行程列表（大厅） ====================
 
 @trips_bp.route('', methods=['GET'])
@@ -64,13 +129,15 @@ def list_trips():
         page: 页码，默认1
         per_page: 每页条数，默认10
         status: 可选，筛选状态
+        exclude_conflicts: 可选，布尔值，如果为 true 则排除与用户日程冲突的行程
 
     返回:
-        200: {"trips": [...], "total": N, "total_pages": N, "current_page": N}
+        200: {"trips": [...], "total": N, "total_pages": N, "current_page": N, "conflicts": [...]}
     """
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 10, type=int)
     status_filter = request.args.get('status')
+    exclude_conflicts = request.args.get('exclude_conflicts', 'false').lower() == 'true'
 
     # 限制每页最多100条
     per_page = min(per_page, 100)
@@ -84,12 +151,35 @@ def list_trips():
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
-    return jsonify({
-        'trips': [t.to_dict() for t in pagination.items],
+    trips_data = []
+    all_conflicts = []
+
+    for t in pagination.items:
+        trip_dict = t.to_dict()
+
+        # 如果启用了冲突检测，检查每个行程是否冲突
+        if exclude_conflicts:
+            user_id = get_current_user_id_from_request()
+            if user_id and t.deadline:
+                conflicts = get_user_conflicts(user_id, t.deadline)
+                if conflicts:
+                    trip_dict['_has_conflicts'] = True
+                    trip_dict['_conflicts'] = conflicts
+                    all_conflicts.extend(conflicts)
+
+        trips_data.append(trip_dict)
+
+    result = {
+        'trips': trips_data,
         'total': pagination.total,
         'total_pages': pagination.pages,
         'current_page': pagination.page
-    }), 200
+    }
+
+    if exclude_conflicts and all_conflicts:
+        result['conflicts'] = all_conflicts
+
+    return jsonify(result), 200
 
 
 # ==================== 创建行程 ====================
@@ -363,9 +453,8 @@ def apply_trip(trip_id: int):
         )
         db.session.add(participant)
 
-        # 更新状态
-        participant_count = TripParticipant.query.filter_by(trip_id=trip_id).count()
-        if participant_count >= trip.min_participants:
+        # 更新状态（复用 current_count + 1 因为刚添加了一个参与者）
+        if current_count + 1 >= trip.min_participants:
             trip.status = 'confirmed'
 
         db.session.commit()
@@ -587,27 +676,33 @@ def create_trip_page():
             return redirect(url_for('trips.create_trip_page'))
 
         description = request.form.get('description', '').strip() or None
-        is_private = request.form.get('is_private') == 'on'
-        visibility = request.form.get('visibility', 'public')
-        min_participants = request.form.get('min_participants', 1, type=int)
+        # is_public checkbox: if checked, visibility='public'; if not, visibility='private'
+        is_public = request.form.get('is_public') == 'on'
+        visibility = 'public' if is_public else 'private'
         max_participants = request.form.get('max_participants', 10, type=int)
-        deadline = request.form.get('deadline', '').strip() or None
-        trigger_condition = request.form.get('trigger_condition', 'auto')
-        public_content = request.form.get('public_content', '').strip() or None
-        hidden_content = request.form.get('hidden_content', '').strip() or None
+        deadline_str = request.form.get('deadline', '').strip()
+
+        # 解析 deadline
+        deadline = None
+        if deadline_str:
+            try:
+                deadline = datetime.strptime(deadline_str, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                flash('时间格式错误', 'danger')
+                return redirect(url_for('trips.create_trip_page'))
 
         trip = Trip(
             title=title,
             description=description,
             creator_id=user_id,
-            is_private=is_private,
+            is_private=not is_public,
             visibility=visibility,
-            min_participants=min_participants,
+            min_participants=1,
             max_participants=max_participants,
             deadline=deadline,
-            trigger_condition=trigger_condition,
-            public_content=public_content,
-            hidden_content=hidden_content
+            trigger_condition='auto',
+            public_content=description,
+            hidden_content=None
         )
         db.session.add(trip)
         db.session.commit()
@@ -634,24 +729,3 @@ def my_trips_page():
     return render_template('my_trips.html',
                            created_trips=created_trips,
                            joined_trips=joined_trips)
-
-
-def get_current_user_id_from_request():
-    """从请求中获取当前用户ID（支持 JWT 或 session）"""
-    from flask import session
-    from flask_jwt_extended import get_jwt_identity, verify_jwt_in_request
-
-    # 优先尝试 JWT
-    try:
-        verify_jwt_in_request(optional=True)
-        identity = get_jwt_identity()
-        if identity:
-            return int(identity)
-    except Exception:
-        pass
-
-    # 其次尝试 session
-    if 'user_id' in session:
-        return session['user_id']
-
-    return None

@@ -2,7 +2,7 @@
 课程表视图模块
 展示用户的任务和行程合并的时间网格视图
 """
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Blueprint, render_template, redirect, url_for, flash
 from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
 
@@ -24,38 +24,43 @@ def get_schedule_items(user_id: int):
     """
     获取当前用户的日程项（任务 + 行程）
     返回格式：[{
-        'type': 'task' | 'trip_public' | 'trip_private' | 'trip_full',
+        'id': int,
         'title': str,
+        'type': 'task' | 'trip_public' | 'trip_private' | 'trip_full',
         'day': int (0=周一, 6=周日),
         'hour': int (6-22),
-        'id': int,
+        'time': str (HH:MM),
+        'date': str (YYYY-MM-DD),
+        'completed': bool,
         'deadline': str,
         'participant_count': int,
         'max_participants': int,
-        'status': str
+        'description': str
     }]
     """
     items = []
 
     # 获取用户任务（截至日期在当周内的）
     tasks = Task.query.filter_by(user_id=user_id, completed=False).all()
-    today = datetime.utcnow().date()
     for task in tasks:
         if task.due_date:
             # 计算周几 (weekday: 0=周一, 6=周日)
             day = task.due_date.weekday()
-            # 计算小时（使用创建时间的小时或截止时间的小时）
-            hour = task.due_date.hour if hasattr(task.due_date, 'hour') else 12
+            # Task.due_date 是 Date 类型，没有具体时间，固定 hour 为 12
+            hour = 12
             items.append({
-                'type': 'task',
+                'id': task.id,
                 'title': task.title,
+                'type': 'task',
                 'day': day,
                 'hour': hour,
-                'id': task.id,
+                'time': '12:00',
+                'date': task.due_date.isoformat() if task.due_date else None,
+                'completed': task.completed,
                 'deadline': task.due_date.isoformat() if task.due_date else None,
                 'participant_count': None,
                 'max_participants': None,
-                'status': 'pending'
+                'description': task.description or ''
             })
 
     # 获取用户参与的行程
@@ -75,18 +80,68 @@ def get_schedule_items(user_id: int):
                 item_type = 'trip_public'
 
             items.append({
-                'type': item_type,
+                'id': trip.id,
                 'title': trip.title,
+                'type': item_type,
                 'day': day,
                 'hour': hour,
-                'id': trip.id,
+                'time': trip.deadline.strftime('%H:%M') if hasattr(trip.deadline, 'strftime') else '12:00',
+                'date': trip.deadline.date().isoformat() if hasattr(trip.deadline, 'date') else trip.deadline.isoformat()[:10],
+                'completed': trip.status == 'confirmed',
                 'deadline': trip.deadline.isoformat() if trip.deadline else None,
                 'participant_count': participant_count,
                 'max_participants': trip.max_participants,
-                'status': trip.status
+                'description': trip.description or ''
             })
 
     return items
+
+
+def group_items_by_date(items: list):
+    """
+    将日程项按今天/明天/后天/XX日后分组
+    返回格式：{
+        'today': [...],
+        'tomorrow': [...],
+        'day_after_tomorrow': [...],
+        'future': { 'N days': [...] }
+    }
+    """
+    today = datetime.now().date()
+    groups = {
+        'today': [],
+        'tomorrow': [],
+        'day_after_tomorrow': [],
+        'future': {}
+    }
+
+    for item in items:
+        if not item.get('date'):
+            continue
+
+        try:
+            item_date = datetime.fromisoformat(item['date']).date() if isinstance(item['date'], str) else item['date']
+        except (ValueError, TypeError):
+            continue
+
+        days_diff = (item_date - today).days
+
+        if days_diff < 0:
+            # 跳过过去的任务
+            continue
+        elif days_diff == 0:
+            groups['today'].append(item)
+        elif days_diff == 1:
+            groups['tomorrow'].append(item)
+        elif days_diff == 2:
+            groups['day_after_tomorrow'].append(item)
+        else:
+            key = f'{days_diff} days'
+            if key not in groups['future']:
+                groups['future'][key] = []
+            groups['future'][key].append(item)
+
+    return groups
 
 
 @schedule_bp.route('', methods=['GET'])
@@ -98,10 +153,12 @@ def view_schedule():
         return redirect(url_for('auth.login'))
 
     items = get_schedule_items(user_id)
+    list_groups = group_items_by_date(items)
 
     # 获取当前用户的任务列表（用于 Tab 切换）
     tasks = Task.query.filter_by(user_id=user_id).order_by(Task.created_at.desc()).all()
 
     return render_template('schedule.html',
                            schedule_items=items,
+                           list_groups=list_groups,
                            tasks=tasks)

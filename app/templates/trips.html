@@ -1,98 +1,276 @@
 {% extends "base.html" %}
 
-{% block title %}行程大厅 - AI-Todo Pro{% endblock %}
+{% block title %}招募大厅 - AI-Todo Pro{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.page-title {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+.add-btn {
+    background: var(--primary-gradient);
+    border: none;
+    border-radius: 20px;
+    padding: 10px 24px;
+    color: white;
+    font-weight: 500;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.add-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102,126,234,0.3);
+    color: white;
+}
+/* 筛选栏 */
+.filter-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 16px 20px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+.filter-label {
+    font-weight: 500;
+    color: #666;
+}
+.filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+.filter-checkbox input {
+    width: 18px;
+    height: 18px;
+    accent-color: #667eea;
+}
+/* 行程卡片 */
+.trips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+}
+.trip-card {
+    background: white;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.trip-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+}
+.trip-card-header {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.trip-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+}
+.trip-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    background: rgba(255,255,255,0.2);
+}
+.trip-card-body {
+    padding: 20px;
+}
+.trip-meta {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: #666;
+}
+.trip-creator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.creator-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+}
+.trip-description {
+    color: #555;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.trip-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 12px;
+    border-top: 1px solid #f0f0f0;
+}
+.trip-participants {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.participant-count {
+    font-weight: 600;
+    color: #667eea;
+}
+.view-btn {
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 1px solid #667eea;
+    color: #667eea;
+    background: transparent;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.view-btn:hover {
+    background: #667eea;
+    color: white;
+}
+/* 空状态 */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+.empty-text {
+    color: #999;
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2 class="mb-3">行程大厅</h2>
-
-        <div class="mb-3">
-            <a href="{{ url_for('trips.create_trip_page') }}" class="btn btn-primary">添加行程</a>
-        </div>
-
-        <!-- 筛选栏 -->
-        <div class="mb-3">
-            <a href="{{ url_for('trips.list_trips_page') }}"
-               class="btn btn-sm {% if not completed_filter %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                全部
-            </a>
-            <a href="{{ url_for('trips.list_trips_page', completed='0') }}"
-               class="btn btn-sm {% if completed_filter == '0' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                未完成
-            </a>
-            <a href="{{ url_for('trips.list_trips_page', completed='1') }}"
-               class="btn btn-sm {% if completed_filter == '1' %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-                已完成
-            </a>
-        </div>
-
-        <!-- 行程卡片列表 -->
-        {% if trips %}
-        <div class="row g-3">
-            {% for trip in trips %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title mb-0">{{ trip.title }}</h5>
-                            {% if trip.trip_type == 'public' %}
-                                <span class="badge bg-success">公开招募</span>
-                            {% else %}
-                                <span class="badge bg-info">私人行程</span>
-                            {% endif %}
-                        </div>
-                        <p class="text-muted mb-2">
-                            发起人：{{ trip.organizer_name }}
-                        </p>
-                        <p class="card-text small">{{ trip.public_description[:80] }}{% if trip.public_description|length > 80 %}...{% endif %}</p>
-                        <div class="d-flex justify-content-between align-items-center small">
-                            <span class="text-muted">
-                                {{ trip.current_participants }}/{{ trip.max_participants }} 人
-                            </span>
-                            {% if trip.deadline %}
-                                <span class="text-muted">
-                                    截止：{{ trip.deadline }}
-                                </span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="card-footer bg-transparent">
-                        <a href="{{ url_for('trips.trip_detail_page', trip_id=trip.id) }}"
-                           class="btn btn-sm btn-outline-primary w-100">
-                            查看详情
-                        </a>
-                    </div>
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center text-muted py-5">
-            <p>暂无行程</p>
-            {% if current_user %}
-            <a href="{{ url_for('trips.create_trip_page') }}" class="btn btn-primary">
-                发布第一个行程
-            </a>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- 分页 -->
-        {% if total_pages > 1 %}
-        <nav class="mt-4">
-            <ul class="pagination justify-content-center">
-                {% for p in range(1, total_pages + 1) %}
-                    <li class="page-item {% if p == current_page %}active{% endif %}">
-                        <a class="page-link"
-                           href="{{ url_for('trips.list_trips_page', page=p, filter_type=filter_type) }}">
-                            {{ p }}
-                        </a>
-                    </li>
-                {% endfor %}
-            </ul>
-        </nav>
-        {% endif %}
+<div class="page-header">
+    <div class="header-left">
+        <h1 class="page-title">招募大厅</h1>
     </div>
+    <a href="{{ url_for('trips.create_trip_page') }}" class="add-btn">
+        + 添加行程
+    </a>
 </div>
+
+<!-- 筛选栏 -->
+<div class="filter-section">
+    <span class="filter-label">筛选：</span>
+    <label class="filter-checkbox">
+        <input type="checkbox" id="filter-no-conflict">
+        <span>不与当前安排冲突</span>
+    </label>
+</div>
+
+<!-- 行程卡片列表 -->
+{% if trips %}
+<div class="trips-grid">
+    {% for trip in trips %}
+    <div class="trip-card">
+        <div class="trip-card-header">
+            <h3 class="trip-card-title">{{ trip.title }}</h3>
+            <span class="trip-badge">
+                {{ '公开' if trip.visibility == 'public' else '私人' if trip.visibility == 'private' else '好友' }}
+            </span>
+        </div>
+        <div class="trip-card-body">
+            <div class="trip-meta">
+                <div class="trip-creator">
+                    <div class="creator-avatar">
+                        {{ trip.creator.username[0].upper() if trip.creator and trip.creator.username else '?' }}
+                    </div>
+                    <span>{{ trip.creator.username if trip.creator else '未知' }}</span>
+                </div>
+                {% if trip.deadline %}
+                <span>{{ trip.deadline.strftime('%Y-%m-%d') }}</span>
+                {% endif %}
+            </div>
+            <p class="trip-description">{{ (trip.public_content or trip.description or '')|truncate(100) }}</p>
+            <div class="trip-footer">
+                <div class="trip-participants">
+                    <span class="participant-count">{{ trip.participants|length if trip.participants else 0 }}/{{ trip.max_participants }}</span>
+                    <span class="text-muted">人</span>
+                </div>
+                <a href="{{ url_for('trips.trip_detail_page', trip_id=trip.id) }}" class="view-btn">
+                    查看详情
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">&#128101;</div>
+    <p class="empty-text">暂无招募中的行程</p>
+    {% if current_user %}
+    <a href="{{ url_for('trips.create_trip_page') }}" class="add-btn">
+        发布第一个行程
+    </a>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- 分页 -->
+{% if total_pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% for p in range(1, total_pages + 1) %}
+            <li class="page-item {% if p == current_page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('trips.list_trips_page', page=p) }}"
+                   style="border-radius: 20px; margin: 0 4px;">
+                    {{ p }}
+                </a>
+            </li>
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('filter-no-conflict').addEventListener('change', function() {
+    // 实际项目中这里应该调用后端API筛选
+    console.log('Filter changed:', this.checked);
+});
+</script>
 {% endblock %}

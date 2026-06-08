@@ -1,113 +1,246 @@
 {% extends "base.html" %}
 
-{% block title %}{% if trip %}编辑行程{% else %}发布行程{% endif %} - AI-Todo Pro{% endblock %}
+{% block title %}{% if trip %}编辑行程{% else %}添加行程{% endif %} - AI-Todo Pro{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 40px 0;
+}
+.form-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+.form-header {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 24px 30px;
+}
+.form-header h3 {
+    margin: 0;
+    font-weight: 600;
+}
+.form-body {
+    padding: 30px;
+}
+.form-group {
+    margin-bottom: 24px;
+}
+.form-label {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 8px;
+    display: block;
+}
+.form-label .required {
+    color: #e53935;
+    margin-left: 2px;
+}
+.form-control {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.form-control:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102,126,234,0.15);
+}
+.form-control::placeholder {
+    color: #aaa;
+}
+textarea.form-control {
+    min-height: 100px;
+    resize: vertical;
+}
+.form-hint {
+    font-size: 12px;
+    color: #999;
+    margin-top: 6px;
+}
+/* 开关样式 */
+.toggle-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.toggle-switch {
+    position: relative;
+    width: 50px;
+    height: 26px;
+}
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 26px;
+}
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+.toggle-switch input:checked + .toggle-slider {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+}
+.toggle-label {
+    font-size: 14px;
+    color: #666;
+}
+/* 按钮 */
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 30px;
+}
+.btn-submit {
+    flex: 1;
+    background: var(--primary-gradient);
+    border: none;
+    border-radius: 8px;
+    padding: 14px 24px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(102,126,234,0.3);
+}
+.btn-cancel {
+    padding: 14px 24px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: white;
+    color: #666;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-cancel:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-8">
-        <div class="card">
-            <div class="card-body">
-                <h3 class="card-title mb-4">{% if trip %}编辑行程{% else %}发布新行程{% endif %}</h3>
+<div class="form-container">
+    <div class="form-card">
+        <div class="form-header">
+            <h3>{% if trip %}编辑行程{% else %}添加行程{% endif %}</h3>
+        </div>
+        <div class="form-body">
+            <form method="POST" action="{{ url_for('trips.create_trip_page') if not trip else url_for('trips.edit_trip_page', trip_id=trip.id) }}">
+                <!-- 行程名称 -->
+                <div class="form-group">
+                    <label class="form-label">
+                        行程名称 <span class="required">*</span>
+                    </label>
+                    <input type="text" class="form-control" id="title" name="title"
+                           value="{{ trip.title if trip else '' }}"
+                           placeholder="例如：周末徒步登山" required autofocus>
+                </div>
 
-                <form method="POST" action="{{ url_for('trips.create_trip_page') if not trip else url_for('trips.edit_trip_page', trip_id=trip.id) }}">
-                    <!--标题 -->
-                    <div class="mb-3">
-                        <label for="title" class="form-label">行程标题 *</label>
-                        <input type="text" class="form-control" id="title" name="title"
-                               value="{{ trip.title if trip else '' }}"
-                               placeholder="例如：周末徒步登山" required autofocus>
-                    </div>
+                <!-- 时间 -->
+                <div class="form-group">
+                    <label class="form-label">
+                        时间 <span class="required">*</span>
+                    </label>
+                    <input type="datetime-local" class="form-control" id="deadline" name="deadline"
+                           value="{{ trip.deadline.strftime('%Y-%m-%dT%H:%M') if trip and trip.deadline else '' }}"
+                           required>
+                    <div class="form-hint">选择行程开始的时间和日期</div>
+                </div>
 
-                    <!-- 行程类型 -->
-                    <div class="mb-3">
-                        <label for="trip_type" class="form-label">行程类型 *</label>
-                        <select class="form-select" id="trip_type" name="trip_type" required>
-                            <option value="public" {% if trip and trip.trip_type == 'public' %}selected{% endif %}>
-                                公开招募 - 任何人可以申请加入
-                            </option>
-                            <option value="private" {% if trip and trip.trip_type == 'private' %}selected{% endif %}>
-                                私人行程 - 仅接受邀请参与
-                            </option>
-                        </select>
+                <!-- 是否公开 -->
+                <div class="form-group">
+                    <label class="form-label">是否公开</label>
+                    <div class="toggle-group">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="is_public" name="is_public"
+                                   {% if trip and trip.visibility == 'public' %}checked{% endif %}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label" id="public-label">
+                            {% if trip and trip.visibility == 'public' %}公开招募{% else %}私人行程（默认不公开）{% endif %}
+                        </span>
                     </div>
+                    <div class="form-hint">公开行程会显示在招募大厅，其他人可以申请加入</div>
+                </div>
 
-                    <!-- 描述 -->
-                    <div class="mb-3">
-                        <label for="description" class="form-label">行程描述 *</label>
-                        <textarea class="form-control" id="description" name="description"
-                                  rows="3"
-                                  placeholder="详细描述行程安排..." required>{{ trip.description if trip else '' }}</textarea>
-                    </div>
+                <!-- 描述（选填） -->
+                <div class="form-group">
+                    <label class="form-label">描述</label>
+                    <textarea class="form-control" id="description" name="description"
+                              rows="4"
+                              placeholder="详细描述行程安排（选填）">{{ trip.description if trip else '' }}</textarea>
+                </div>
 
-                    <!-- 公开内容 -->
-                    <div class="mb-3">
-                        <label for="public_description" class="form-label">公开信息 *</label>
-                        <textarea class="form-control" id="public_description" name="public_description"
-                                  rows="2"
-                                  placeholder="公开给所有用户查看的信息..." required>{{ trip.public_description if trip else '' }}</textarea>
-                        <div class="form-text">此信息将展示在行程列表和详情页的公开区域</div>
-                    </div>
+                <!-- 人数限制（选填） -->
+                <div class="form-group">
+                    <label class="form-label">最大参与人数</label>
+                    <input type="number" class="form-control" id="max_participants"
+                           name="max_participants"
+                           value="{{ trip.max_participants if trip else '10' }}"
+                           min="1" max="100">
+                    <div class="form-hint">留空或设为0表示不限制人数</div>
+                </div>
 
-                    <!-- 隐藏内容 -->
-                    <div class="mb-3">
-                        <label for="private_content" class="form-label">隐藏内容</label>
-                        <textarea class="form-control" id="private_content" name="private_content"
-                                  rows="3"
-                                  placeholder="仅满足条件后可见的详细内容（如集合地点、联系方式等）...">{{ trip.private_content if trip else '' }}</textarea>
-                        <div class="form-text">条件未满足时，用户无法查看此内容</div>
-                    </div>
-
-                    <!-- 人数条件 -->
-                    <div class="row g-3 mb-3">
-                        <div class="col-md-6">
-                            <label for="min_participants" class="form-label">最少参与人数 *</label>
-                            <input type="number" class="form-control" id="min_participants"
-                                   name="min_participants"
-                                   value="{{ trip.min_participants if trip else '2' }}"
-                                   min="1" required>
-                        </div>
-                        <div class="col-md-6">
-                            <label for="max_participants" class="form-label">最多参与人数 *</label>
-                            <input type="number" class="form-control" id="max_participants"
-                                   name="max_participants"
-                                   value="{{ trip.max_participants if trip else '10' }}"
-                                   min="1" required>
-                        </div>
-                    </div>
-
-                    <!-- 时间条件 -->
-                    <div class="mb-3">
-                        <label for="deadline" class="form-label">截止日期</label>
-                        <input type="datetime-local" class="form-control" id="deadline"
-                               name="deadline"
-                               value="{{ trip.deadline.strftime('%Y-%m-%dT%H:%M') if trip and trip.deadline else '' }}">
-                        <div class="form-text">留空表示无截止日期</div>
-                    </div>
-
-                    <!-- 触发条件 -->
-                    <div class="mb-3">
-                        <label for="trigger_condition" class="form-label">触发条件 *</label>
-                        <select class="form-select" id="trigger_condition" name="trigger_condition" required>
-                            <option value="auto" {% if trip and trip.trigger_condition == 'auto' %}selected{% endif %}>
-                                自动 - 人数满足后自动确认
-                            </option>
-                            <option value="manual" {% if trip and trip.trigger_condition == 'manual' %}selected{% endif %}>
-                                手动 - 发起人手动确认
-                            </option>
-                        </select>
-                    </div>
-
-                   <div class="d-flex gap-2">
-                        <button type="submit" class="btn btn-primary">
-                            {% if trip %}保存修改{% else %}发布行程{% endif %}
-                        </button>
-                        <a href="{{ url_for('trips.list_trips_page') }}" class="btn btn-outline-secondary">
-                            取消
-                        </a>
-                    </div>
-                </form>
-            </div>
+                <!-- 操作按钮 -->
+                <div class="form-actions">
+                    <button type="submit" class="btn-submit">
+                        {% if trip %}保存修改{% else %}添加行程{% endif %}
+                    </button>
+                    <a href="{{ url_for('trips.list_trips_page') }}" class="btn-cancel">
+                        取消
+                    </a>
+                </div>
+            </form>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 动态更新公开/私人标签
+document.getElementById('is_public').addEventListener('change', function() {
+    const label = document.getElementById('public-label');
+    if (this.checked) {
+        label.textContent = '公开招募';
+    } else {
+        label.textContent = '私人行程（默认不公开）';
+    }
+});
+</script>
 {% endblock %}

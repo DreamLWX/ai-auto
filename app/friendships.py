@@ -38,13 +38,22 @@ def follow_user(user_id: int):
     if not target_user:
         return jsonify({'error': 'User not found'}), 404
 
-    # 检查是否已经关注（任意状态）
+    # 检查是否已经关注且状态为 accepted
     existing = Friendship.query.filter_by(
         follower_id=current_user_id,
-        followed_id=user_id
+        followed_id=user_id,
+        status='accepted'
     ).first()
     if existing:
         return jsonify({'message': 'Already following'}), 200
+
+    # 如果有 pending 或 rejected 的记录，先删除（允许重新关注）
+    stale = Friendship.query.filter_by(
+        follower_id=current_user_id,
+        followed_id=user_id
+    ).first()
+    if stale:
+        db.session.delete(stale)
 
     # 创建关注请求
     friendship = Friendship(

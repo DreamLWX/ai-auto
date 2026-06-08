@@ -4,190 +4,346 @@
 
 {% block extra_css %}
 <style>
-    .schedule-grid {
-        display: grid;
-        grid-template-columns: 80px repeat(7, 1fr);
-        grid-template-rows: 50px repeat(17, 40px);
-        border: 1px solid #dee2e6;
-        font-size: 12px;
-    }
-    .schedule-header {
-        background: #f8f9fa;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid #dee2e6;
-        padding: 4px;
-    }
-    .schedule-time {
-        background: #f8f9fa;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid #dee2e6;
-        color: #6c757d;
-        font-size: 11px;
-    }
-    .schedule-cell {
-        border: 1px solid #dee2e6;
-        padding: 2px 4px;
-        position: relative;
-        overflow: hidden;
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    .schedule-cell:hover {
-        opacity: 0.85;
-    }
-    /* 公开招募 */
-    .cell-public {
-        border-color: #4caf50 !important;
-        border-width: 2px;
-        background-color: #e8f5e9;
-    }
-    /* 私人行程 */
-    .cell-private {
-        border-color: #2196f3 !important;
-        border-width: 2px;
-        background-color: #e3f2fd;
-    }
-    /* 已满/已安排 */
-    .cell-full {
-        border-color: #ff9800 !important;
-        border-width: 2px;
-        background-color: #fff3e0;
-    }
-    .cell-content {
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        line-height: 1.3;
-    }
-    .cell-icon {
-        margin-right: 2px;
-    }
-    .cell-meta {
-        font-size: 10px;
-        color: #666;
-    }
+/* 通用样式 */
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+.view-toggle-group {
+    display: flex;
+    gap: 8px;
+}
+.view-toggle-group .btn {
+    border-radius: 20px;
+    padding: 8px 20px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+.view-toggle-group .btn.active {
+    background: var(--primary-gradient);
+    border: none;
+    color: white;
+}
+
+/* 筛选按钮组 */
+.filter-group {
+    display: flex;
+    gap: 8px;
+}
+.filter-btn {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid #e0e0e0;
+    background: white;
+    color: #666;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.filter-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+.filter-btn.active {
+    background: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+
+/* 时间表视图 */
+.schedule-container {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+.schedule-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.week-nav-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid #e0e0e0;
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.week-nav-btn:hover {
+    background: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+.week-label {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+}
+.schedule-grid {
+    display: grid;
+    grid-template-columns: 70px repeat(7, 1fr);
+    min-height: 600px;
+}
+.schedule-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 600;
+    padding: 16px 8px;
+    text-align: center;
+    font-size: 14px;
+}
+.schedule-header:first-child {
+    background: rgba(0,0,0,0.1);
+}
+.time-cell {
+    background: #fafafa;
+    color: #999;
+    font-size: 12px;
+    padding: 12px 8px;
+    text-align: center;
+    border-bottom: 1px solid #f0f0f0;
+    border-right: 1px solid #f0f0f0;
+}
+.schedule-cell {
+    border-bottom: 1px solid #f0f0f0;
+    border-right: 1px solid #f0f0f0;
+    padding: 4px;
+    position: relative;
+    min-height: 60px;
+    transition: background 0.2s;
+}
+.schedule-cell:hover {
+    background: #f5f5ff;
+}
+.schedule-item {
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.schedule-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.schedule-item.public {
+    background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+    border-left: 3px solid #4caf50;
+    color: #2e7d32;
+}
+.schedule-item.private {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border-left: 3px solid #2196f3;
+    color: #1565c0;
+}
+.schedule-item.highlight {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+.item-time {
+    font-size: 11px;
+    opacity: 0.8;
+    margin-bottom: 2px;
+}
+.item-title {
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 列表视图 */
+.list-container {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    overflow: hidden;
+}
+.list-section {
+    margin-bottom: 8px;
+}
+.list-section-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 20px;
+    font-weight: 600;
+    font-size: 14px;
+}
+.list-section-content {
+    padding: 12px 20px;
+}
+.list-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background: white;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid #f0f0f0;
+}
+.list-item:hover {
+    border-color: #667eea;
+    box-shadow: 0 2px 10px rgba(102,126,234,0.15);
+}
+.list-item-date {
+    min-width: 60px;
+    text-align: center;
+    padding: 8px 12px;
+    background: #f8f9ff;
+    border-radius: 8px;
+    margin-right: 16px;
+}
+.list-item-date .day {
+    font-size: 20px;
+    font-weight: 700;
+    color: #333;
+}
+.list-item-date .month {
+    font-size: 11px;
+    color: #999;
+}
+.list-item-time {
+    font-size: 14px;
+    color: #667eea;
+    font-weight: 600;
+    margin-right: 16px;
+    min-width: 50px;
+}
+.list-item-title {
+    flex: 1;
+    font-weight: 500;
+    color: #333;
+}
+.list-item-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+.list-item-badge.public {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+.list-item-badge.private {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+.list-empty {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
+/* 详情弹窗 */
+.detail-modal .modal-content {
+    border-radius: 16px;
+    overflow: hidden;
+}
+.detail-modal .modal-header {
+    background: var(--primary-gradient);
+    color: white;
+    border: none;
+}
+.detail-modal .modal-body {
+    padding: 24px;
+}
+.detail-modal .modal-footer {
+    border: none;
+    padding: 16px 24px;
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-12">
-        <h2 class="mb-3">时间表</h2>
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-outline-primary active" id="btn-schedule" onclick="showView('schedule')">时间表</button>
-                <button type="button" class="btn btn-outline-secondary" id="btn-list" onclick="showView('list')">列表</button>
-            </div>
-            <div class="btn-group" role="group">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="filter-all" onclick="setScheduleFilter('all')">全部</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="filter-pending" onclick="setScheduleFilter('pending')">未完成</button>
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="filter-done" onclick="setScheduleFilter('done')">已完成</button>
-            </div>
-            <a href="{{ url_for('trips.create_trip_page') }}" class="btn btn-primary">添加行程</a>
+<div class="page-header">
+    <h2 style="margin:0;font-weight:600;">我的行程</h2>
+    <div class="d-flex align-items-center gap-3">
+        <div class="filter-group">
+            <button class="filter-btn active" data-filter="all">全部</button>
+            <button class="filter-btn" data-filter="pending">未完成</button>
+            <button class="filter-btn" data-filter="done">已完成</button>
         </div>
-
-        <!-- 任务列表 -->
-            <div id="tasks-panel" style="display: none;">
-                <div class="card">
-                    <div class="card-body">
-                        {% if tasks %}
-                        <table class="table table-hover align-middle">
-                            <thead>
-                                <tr>
-                                    <th>标题</th>
-                                    <th>截止日期</th>
-                                    <th>状态</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for task in tasks %}
-                                <tr data-completed="{{ 'true' if task.completed else 'false' }}">
-                                    <td>{{ task.title }}</td>
-                                    <td>{{ task.due_date or '-' }}</td>
-                                    <td>
-                                        {% if task.completed %}
-                                            <span class="badge bg-success">已完成</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">进行中</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                        {% else %}
-                        <p class="text-muted text-center py-4">暂无行程</p>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <!-- 时间表 -->
-            <div id="schedule-panel">
-                <div class="card">
-                    <div class="card-body">
-                        <div class="schedule-grid">
-                            <!-- 表头 -->
-                            <div class="schedule-header"></div>
-                            <div class="schedule-header">周一</div>
-                            <div class="schedule-header">周二</div>
-                            <div class="schedule-header">周三</div>
-                            <div class="schedule-header">周四</div>
-                            <div class="schedule-header">周五</div>
-                            <div class="schedule-header">周六</div>
-                            <div class="schedule-header">周日</div>
-
-                            <!-- 时间行 -->
-                            {% for hour in range(6, 23) %}
-                            <div class="schedule-time">{{ '%02d:00' | format(hour) }}</div>
-                            {% for day in range(7) %}
-                            <div class="schedule-cell"
-                                 data-day="{{ day }}"
-                                 data-hour="{{ hour }}"
-                                 id="cell-{{ day }}-{{ hour }}">
-                            </div>
-                            {% endfor %}
-                            {% endfor %}
-                        </div>
-
-                        <!-- 图例 -->
-                        <div class="mt-3 d-flex gap-4">
-                            <span>
-                                <span style="color:#4caf50">&#11044;</span> 公开招募
-                            </span>
-                            <span>
-                                <span style="color:#2196f3">&#11044;</span> 私人行程
-                            </span>
-                            <span>
-                                <span style="color:#ff9800">&#11044;</span> 已满/已安排
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <div class="view-toggle-group">
+            <button class="btn btn-outline-primary active" id="btn-schedule">时间表</button>
+            <button class="btn btn-outline-secondary" id="btn-list">列表</button>
+        </div>
+        <a href="{{ url_for('trips.create_trip_page') }}" class="btn btn-primary" style="border-radius:20px;padding:8px 20px;">
+            + 添加
+        </a>
     </div>
 </div>
 
-<!-- 详情 Modal -->
-<div class="modal fade" id="scheduleModal" tabindex="-1">
-    <div class="modal-dialog">
+<!-- 时间表视图 -->
+<div id="schedule-view">
+    <div class="schedule-container">
+        <div class="schedule-nav">
+            <button class="week-nav-btn" id="prev-week">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                </svg>
+            </button>
+            <span class="week-label" id="week-label">2026年6月8日 - 6月14日</span>
+            <button class="week-nav-btn" id="next-week">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="schedule-grid">
+            <!-- 表头 -->
+            <div class="schedule-header"></div>
+            <div class="schedule-header">周一</div>
+            <div class="schedule-header">周二</div>
+            <div class="schedule-header">周三</div>
+            <div class="schedule-header">周四</div>
+            <div class="schedule-header">周五</div>
+            <div class="schedule-header">周六</div>
+            <div class="schedule-header">周日</div>
+
+            <!-- 时间行 6:00 - 22:00 -->
+            {% for hour in range(6, 23) %}
+            <div class="time-cell">{{ '%02d:00' | format(hour) }}</div>
+            {% for day in range(7) %}
+            <div class="schedule-cell" data-day="{{ day }}" data-hour="{{ hour }}" id="cell-{{ day }}-{{ hour }}"></div>
+            {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- 列表视图 -->
+<div id="list-view" style="display: none;">
+    <div class="list-container">
+        <!-- 动态生成列表内容 -->
+    </div>
+</div>
+
+<!-- 详情弹窗 -->
+<div class="modal fade detail-modal" id="scheduleModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="modalTitle">详情</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title" id="modalTitle">行程详情</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p id="modalContent"></p>
-                <p class="text-muted small" id="modalMeta"></p>
+                <div id="modalContent"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-                <button type="button" class="btn btn-primary" id="modalAction">申请</button>
+                <button type="button" class="btn btn-primary" id="modalAction">查看详情</button>
             </div>
         </div>
     </div>
@@ -196,164 +352,263 @@
 
 {% block extra_js %}
 <script>
-function showView(view) {
-    const schedulePanel = document.getElementById('schedule-panel');
-    const listPanel = document.getElementById('tasks-panel');
+// 当前视图状态
+let currentView = 'schedule';
+let currentFilter = 'all';
+let currentWeekOffset = 0;
+
+// 初始化
+document.addEventListener('DOMContentLoaded', function() {
+    updateWeekLabel();
+    renderSchedule();
+    renderListView();
+    setupEventListeners();
+});
+
+function setupEventListeners() {
+    // 视图切换
+    document.getElementById('btn-schedule').addEventListener('click', () => switchView('schedule'));
+    document.getElementById('btn-list').addEventListener('click', () => switchView('list'));
+
+    // 筛选按钮
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentFilter = this.dataset.filter;
+            applyFilter();
+        });
+    });
+
+    // 周导航
+    document.getElementById('prev-week').addEventListener('click', () => {
+        currentWeekOffset--;
+        updateWeekLabel();
+        renderSchedule();
+        renderListView();
+    });
+    document.getElementById('next-week').addEventListener('click', () => {
+        currentWeekOffset++;
+        updateWeekLabel();
+        renderSchedule();
+        renderListView();
+    });
+}
+
+function switchView(view) {
+    currentView = view;
+    const scheduleView = document.getElementById('schedule-view');
+    const listView = document.getElementById('list-view');
     const btnSchedule = document.getElementById('btn-schedule');
     const btnList = document.getElementById('btn-list');
 
     if (view === 'schedule') {
-        schedulePanel.style.display = 'block';
-        listPanel.style.display = 'none';
-        btnSchedule.classList.add('active');
+        scheduleView.style.display = 'block';
+        listView.style.display = 'none';
+        btnSchedule.classList.add('active', 'btn-outline-primary');
         btnSchedule.classList.remove('btn-outline-secondary');
-        btnSchedule.classList.add('btn-outline-primary');
-        btnList.classList.remove('active');
-        btnList.classList.remove('btn-outline-primary');
+        btnList.classList.remove('active', 'btn-outline-primary');
         btnList.classList.add('btn-outline-secondary');
     } else {
-        schedulePanel.style.display = 'none';
-        listPanel.style.display = 'block';
-        btnList.classList.add('active');
+        scheduleView.style.display = 'none';
+        listView.style.display = 'block';
+        btnList.classList.add('active', 'btn-outline-primary');
         btnList.classList.remove('btn-outline-secondary');
-        btnList.classList.add('btn-outline-primary');
-        btnSchedule.classList.remove('active');
-        btnSchedule.classList.remove('btn-outline-primary');
+        btnSchedule.classList.remove('active', 'btn-outline-primary');
         btnSchedule.classList.add('btn-outline-secondary');
     }
 }
 
-let currentScheduleFilter = 'all';
+function updateWeekLabel() {
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay() + 1 + (currentWeekOffset * 7));
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
 
-function setScheduleFilter(filter) {
-    currentScheduleFilter = filter;
+    const year = startOfWeek.getFullYear();
+    const startMonth = startOfWeek.getMonth() + 1;
+    const startDay = startOfWeek.getDate();
+    const endMonth = endOfWeek.getMonth() + 1;
+    const endDay = endOfWeek.getDate();
 
-    // Update button states
-    document.getElementById('filter-all').classList.remove('btn-primary');
-    document.getElementById('filter-all').classList.add('btn-outline-secondary');
-    document.getElementById('filter-pending').classList.remove('btn-primary');
-    document.getElementById('filter-pending').classList.add('btn-outline-secondary');
-    document.getElementById('filter-done').classList.remove('btn-primary');
-    document.getElementById('filter-done').classList.add('btn-outline-secondary');
-
-    if (filter === 'all') {
-        document.getElementById('filter-all').classList.remove('btn-outline-secondary');
-        document.getElementById('filter-all').classList.add('btn-primary');
-    } else if (filter === 'pending') {
-        document.getElementById('filter-pending').classList.remove('btn-outline-secondary');
-        document.getElementById('filter-pending').classList.add('btn-primary');
-    } else if (filter === 'done') {
-        document.getElementById('filter-done').classList.remove('btn-outline-secondary');
-        document.getElementById('filter-done').classList.add('btn-primary');
-    }
-
-    // Apply filter to schedule cells
-    document.querySelectorAll('.schedule-cell').forEach(function(cell) {
-        const completed = cell.getAttribute('data-completed');
-        if (filter === 'all') {
-            cell.style.opacity = '1';
-        } else if (filter === 'pending') {
-            cell.style.opacity = completed === 'false' ? '1' : '0.3';
-        } else if (filter === 'done') {
-            cell.style.opacity = completed === 'true' ? '1' : '0.3';
-        }
-    });
-
-    // Apply filter to task list rows
-    document.querySelectorAll('#tasks-panel tbody tr[data-completed]').forEach(function(row) {
-        const completed = row.getAttribute('data-completed');
-        if (filter === 'all') {
-            row.style.opacity = '1';
-        } else if (filter === 'pending') {
-            row.style.opacity = completed === 'false' ? '1' : '0.3';
-        } else if (filter === 'done') {
-            row.style.opacity = completed === 'true' ? '1' : '0.3';
-        }
-    });
+    document.getElementById('week-label').textContent =
+        `${year}年${startMonth}月${startDay}日 - ${endMonth}月${endDay}日`;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Set default view
-    showView('schedule');
+function applyFilter() {
+    if (currentView === 'schedule') {
+        document.querySelectorAll('.schedule-item').forEach(item => {
+            const status = item.dataset.status;
+            if (currentFilter === 'all') {
+                item.classList.remove('highlight');
+            } else if (currentFilter === 'pending') {
+                item.classList.toggle('highlight', status === 'pending');
+            } else if (currentFilter === 'done') {
+                item.classList.toggle('highlight', status === 'done');
+            }
+        });
+    } else {
+        document.querySelectorAll('.list-item').forEach(item => {
+            const status = item.dataset.status;
+            item.style.display = currentFilter === 'all' || status === currentFilter ? 'flex' : 'none';
+        });
+    }
+}
 
-    // Set default filter
-    setScheduleFilter('all');
+function renderSchedule() {
+    // 清除现有数据
+    document.querySelectorAll('.schedule-cell').forEach(cell => {
+        cell.innerHTML = '';
+    });
 
-    //注入日程数据
+    // 注入日程数据（示例数据，实际从后端获取）
     const scheduleItems = {{ schedule_items | tojson }};
 
     scheduleItems.forEach(function(item) {
         const cell = document.getElementById('cell-' + item.day + '-' + item.hour);
         if (!cell) return;
 
-        let cssClass = 'cell-public';
-        let icon = '&#128101;';  // 👥
-        let isCompleted = 'false';
+        const itemClass = item.type === 'trip_private' ? 'private' : 'public';
+        const status = item.completed ? 'done' : 'pending';
 
-        if (item.type === 'trip_private') {
-            cssClass = 'cell-private';
-            icon = '&#128274;';  // 🔒
-            isCompleted = 'false';
-        } else if (item.type === 'trip_full') {
-            cssClass = 'cell-full';
-            icon = '&#9989;';  // ✅
-            isCompleted = 'true';
-        } else if (item.type === 'task') {
-            isCompleted = item.completed ? 'true' : 'false';
-        }
+        const div = document.createElement('div');
+        div.className = `schedule-item ${itemClass}`;
+        div.dataset.status = status;
+        div.dataset.id = item.id;
+        div.dataset.title = item.title;
+        div.innerHTML = `
+            <div class="item-time">${item.time || ''}</div>
+            <div class="item-title" title="${item.title}">${item.title}</div>
+        `;
 
-        cell.classList.add(cssClass);
-        cell.setAttribute('data-title', item.title);
-        cell.setAttribute('data-deadline', item.deadline || '');
-        cell.setAttribute('data-type', item.type);
-        cell.setAttribute('data-id', item.id);
-        cell.setAttribute('data-completed', isCompleted);
+        // Hover显示简略信息
+        div.title = `${item.title}\n${item.time || ''}`;
 
-        let metaText = '';
-        if (item.type === 'trip_public' || item.type === 'trip_private' || item.type === 'trip_full') {
-            metaText = item.participant_count + '/' + item.max_participants + '人';
-        } else if (item.deadline) {
-            metaText = item.deadline;
-        }
+        // 点击事件
+        div.addEventListener('click', function() {
+            showDetailModal(item);
+        });
 
-        cell.innerHTML = '<div class="cell-content"><span class="cell-icon">' + icon + '</span>' +
-                         '<span>' + item.title + '</span></div>' +
-                         '<div class="cell-meta">' + metaText + '</div>';
-
-        // Tooltip
-        cell.setAttribute('title', item.title + '\n' + (item.deadline || ''));
+        cell.appendChild(div);
     });
 
-    // 点击格子弹出 Modal
-    document.querySelectorAll('.schedule-cell').forEach(function(cell) {
-        cell.addEventListener('click', function() {
-            const title = cell.getAttribute('data-title');
-            const deadline = cell.getAttribute('data-deadline');
-            const type = cell.getAttribute('data-type');
-            const id = cell.getAttribute('data-id');
+    applyFilter();
+}
 
-            if (!title) return;
+function renderListView() {
+    const listContainer = document.querySelector('#list-view .list-container');
+    const scheduleItems = {{ schedule_items | tojson }};
 
-            document.getElementById('modalTitle').textContent = title;
-            document.getElementById('modalContent').textContent = '类型：' + type;
-            document.getElementById('modalMeta').textContent = deadline ? '截止时间：' + deadline : '';
+    // 按日期分组
+    const groups = {
+        'today': { label: '今天', items: [] },
+        'tomorrow': { label: '明天', items: [] },
+        'dayAfterTomorrow': { label: '后天', items: [] },
+        'future': { label: '几日后', items: [] }
+    };
 
-            // 显示/隐藏申请按钮（仅对公开招募行程显示）
-            const actionBtn = document.getElementById('modalAction');
-            if (type === 'trip_public') {
-                actionBtn.style.display = 'block';
-                actionBtn.textContent = '申请参加';
-                actionBtn.onclick = function() {
-                    alert('申请功能开发中');
-                };
-            } else {
-                actionBtn.style.display = 'none';
-            }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-            const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
-            modal.show();
+    scheduleItems.forEach(function(item) {
+        if (item.completed && currentFilter === 'pending') return;
+        if (!item.completed && currentFilter === 'done') return;
+
+        const itemDate = new Date(item.date);
+        itemDate.setHours(0, 0, 0, 0);
+
+        const diffDays = Math.ceil((itemDate - today) / (1000 * 60 * 60 * 24));
+
+        let group;
+        if (diffDays < 0) return; // 不显示过去的
+        if (diffDays === 0) group = groups.today;
+        else if (diffDays === 1) group = groups.tomorrow;
+        else if (diffDays === 2) group = groups.dayAfterTomorrow;
+        else group = groups.future;
+
+        group.items.push(item);
+    });
+
+    let html = '';
+
+    for (const [key, group] of Object.entries(groups)) {
+        if (group.items.length === 0) continue;
+
+        html += `
+        <div class="list-section">
+            <div class="list-section-header">${group.label}</div>
+            <div class="list-section-content">
+        `;
+
+        group.items.forEach(item => {
+            const itemDate = new Date(item.date);
+            const month = itemDate.getMonth() + 1;
+            const day = itemDate.getDate();
+            const itemClass = item.type === 'trip_private' ? 'private' : 'public';
+
+            html += `
+            <div class="list-item" data-status="${item.completed ? 'done' : 'pending'}" data-id="${item.id}">
+                <div class="list-item-date">
+                    <div class="day">${day}</div>
+                    <div class="month">${month}月</div>
+                </div>
+                <div class="list-item-time">${item.time || ''}</div>
+                <div class="list-item-title">${item.title}</div>
+                <span class="list-item-badge ${itemClass}">${item.type === 'trip_private' ? '私人' : '公开'}</span>
+            </div>
+            `;
+        });
+
+        html += `
+            </div>
+        </div>
+        `;
+    }
+
+    if (html === '') {
+        html = '<div class="list-empty">暂无行程</div>';
+    }
+
+    listContainer.innerHTML = html;
+
+    // 添加点击事件
+    listContainer.querySelectorAll('.list-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const itemData = scheduleItems.find(s => s.id == id);
+            if (itemData) showDetailModal(itemData);
         });
     });
-});
+}
+
+function showDetailModal(item) {
+    document.getElementById('modalTitle').textContent = item.title;
+    document.getElementById('modalContent').innerHTML = `
+        <div class="mb-3">
+            <strong>类型：</strong> ${item.type === 'trip_private' ? '私人行程' : '公开招募'}
+        </div>
+        <div class="mb-3">
+            <strong>时间：</strong> ${item.date || ''} ${item.time || ''}
+        </div>
+        <div class="text-muted small">
+            ${item.description || ''}
+        </div>
+    `;
+
+    const actionBtn = document.getElementById('modalAction');
+    if (item.type === 'trip_public') {
+        actionBtn.style.display = 'block';
+        actionBtn.textContent = '申请参加';
+        actionBtn.onclick = function() {
+            alert('申请功能开发中');
+        };
+    } else {
+        actionBtn.style.display = 'none';
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('scheduleModal'));
+    modal.show();
+}
 </script>
 {% endblock %}
