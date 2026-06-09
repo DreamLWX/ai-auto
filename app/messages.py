@@ -127,11 +127,25 @@ def get_conversation(other_id: int):
             msg.is_read = True
     db.session.commit()
 
+    # 获取好友列表
+    following = Friendship.query.filter_by(
+        follower_id=user_id,
+        status='accepted'
+    ).all()
+    friends = []
+    for f in following:
+        friend = User.query.get(f.followed_id)
+        if friend:
+            friends.append({
+                'user_id': friend.id,
+                'username': friend.username,
+                'nickname': friend.nickname or ''
+            })
+
     return render_template('messages.html',
                            conversation_user=other_user,
                            messages=messages,
-                           conversations=get_conversations(user_id),
-                           friends=[],
+                           friends=friends,
                            unread_count=0)
 
 
@@ -242,6 +256,9 @@ def handle_message(msg_id: int, action: str):
 
     msg.action_status = 'approved' if action == 'approve' else 'rejected'
 
+    # 确定要被添加为参与者的用户ID（不是当前审批人，而是申请人/被邀请人）
+    target_user_id = msg.sender_id if msg.type == 'application' else msg.user_id
+
     # 如果是接受，处理相关操作
     if action == 'approve' and msg.related_id:
         from .trips import is_participant, Trip, TripParticipant
@@ -251,11 +268,33 @@ def handle_message(msg_id: int, action: str):
             if current_count < trip.max_participants:
                 participant = TripParticipant(
                     trip_id=trip.id,
-                    user_id=user_id
+                    user_id=target_user_id
                 )
                 db.session.add(participant)
                 if current_count + 1 >= trip.min_participants:
                     trip.status = 'confirmed'
+
+    # 发送结果通知给申请人/被邀请人
+    from .models import User
+    trip = Trip.query.get(msg.related_id) if msg.related_id else None
+    trip_title = trip.title if trip else '行程'
+    actor = User.query.get(user_id)
+
+    if action == 'approve':
+        result_content = f'您{"申请" if msg.type == "application" else "被邀请"}的行程「{trip_title}」已被 {actor.username if actor else "某用户"} 批准'
+    else:
+        result_content = f'您{"申请" if msg.type == "application" else "被邀请"}的行程「{trip_title}」已被 {actor.username if actor else "某用户"} 拒绝'
+
+    result_msg = Message(
+        user_id=target_user_id,
+        sender_id=user_id,
+        type='approval',
+        title='申请结果' if msg.type == 'application' else '邀请结果',
+        content=result_content,
+        related_id=msg.related_id,
+        action_status='approved' if action == 'approve' else 'rejected'
+    )
+    db.session.add(result_msg)
 
     db.session.commit()
 

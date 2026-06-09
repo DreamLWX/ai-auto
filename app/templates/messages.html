@@ -223,26 +223,21 @@
 
 {% block content %}
 <div class="messages-container">
-    <!-- 左侧会话列表 -->
+    <!-- 左侧好友列表 -->
     <div class="conversations-list">
-        <div class="conv-header">消息</div>
-        {% if conversations %}
-            {% for conv in conversations %}
-            <div class="conv-item {% if conv.unread_count > 0 %}unread{% endif %}" onclick="loadConversation({{ conv.user_id }})">
-                <div class="conv-avatar">{{ conv.avatar }}</div>
+        <div class="conv-header">好友</div>
+        {% if friends %}
+            {% for friend in friends %}
+            <div class="conv-item" onclick="loadConversation({{ friend.user_id }})">
+                <div class="conv-avatar">{{ friend.username[0].upper() }}</div>
                 <div class="conv-info">
-                    <div class="conv-name">{{ conv.username }}{% if conv.nickname %} ({{ conv.nickname }}){% endif %}</div>
-                    <div class="conv-preview">{{ conv.last_message }}</div>
-                </div>
-                <div>
-                    {% if conv.unread_count > 0 %}
-                    <span class="unread-badge">{{ conv.unread_count }}</span>
-                    {% endif %}
+                    <div class="conv-name">{{ friend.username }}{% if friend.nickname %} ({{ friend.nickname }}){% endif %}</div>
+                    <div class="conv-preview">点击开始聊天</div>
                 </div>
             </div>
             {% endfor %}
         {% else %}
-            <div class="empty-state">暂无消息</div>
+            <div class="empty-state">暂无好友</div>
         {% endif %}
     </div>
 

@@ -260,7 +260,9 @@ async function loadFriends() {
             option.textContent = friend.username + (friend.nickname ? ` (${friend.nickname})` : '');
             select.appendChild(option);
         });
-    } catch (e) {}
+    } catch (e) {
+        console.error('加载好友列表失败', e);
+    }
 }
 
 // 提交申请
