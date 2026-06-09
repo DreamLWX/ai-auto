@@ -413,6 +413,9 @@ def apply_trip(trip_id: int):
     请求头:
         Authorization: Bearer <token>
 
+    请求体:
+        remark: 备注（选填）
+
     返回:
         200: {"message": "Application submitted"}
         400: {"error": "Already applied or already a participant"}
@@ -440,6 +443,10 @@ def apply_trip(trip_id: int):
     if existing:
         return jsonify({'error': 'Already applied'}), 400
 
+    # 获取备注
+    data = request.get_json() or {}
+    remark = data.get('remark', '').strip() or None
+
     # 自动审批：如果不需要审批，直接成为参与者
     if trip.trigger_condition == 'auto':
         # 检查是否已达最大人数
@@ -460,13 +467,15 @@ def apply_trip(trip_id: int):
         # 发送消息给行程创建者
         from .models import User
         applicant = User.query.get(user_id)
+        remark_info = f'（备注：{remark}）' if remark else ''
         msg = Message(
             user_id=trip.creator_id,
             sender_id=user_id,
             type='application',
             title='新的行程参与',
-            content=f'{applicant.username if applicant else "某用户"} 加入了您的行程「{trip.title}」',
-            related_id=trip_id
+            content=f'{applicant.username if applicant else "某用户"} 加入了您的行程「{trip.title}」{remark_info}',
+            related_id=trip_id,
+            remark=remark
         )
         db.session.add(msg)
 
@@ -484,19 +493,169 @@ def apply_trip(trip_id: int):
     # 发送消息给行程创建者
     from .models import User
     applicant = User.query.get(user_id)
+    remark_info = f'（备注：{remark}）' if remark else ''
     msg = Message(
         user_id=trip.creator_id,
         sender_id=user_id,
         type='application',
         title='新的行程申请',
-        content=f'{applicant.username if applicant else "某用户"} 申请加入您的行程「{trip.title}」',
-        related_id=trip_id
+        content=f'{applicant.username if applicant else "某用户"} 申请加入您的行程「{trip.title}」{remark_info}',
+        related_id=trip_id,
+        remark=remark
     )
     db.session.add(msg)
 
     db.session.commit()
 
     return jsonify({'message': 'Application submitted'}), 200
+
+
+# ==================== 邀请好友加入行程 ====================
+
+@trips_bp.route('/<int:trip_id>/invite', methods=['POST'])
+@jwt_required()
+def invite_trip(trip_id: int):
+    """
+    邀请好友加入行程（仅发起人可以邀请）
+
+    请求头:
+        Authorization: Bearer <token>
+
+    请求体:
+        user_id: 被邀请的好友ID
+        remark: 备注（选填）
+
+    返回:
+        200: {"message": "Invitation sent"}
+        403: {"error": "Only creator can invite"}
+        404: {"error": "Trip not found"}
+    """
+    user_id = int(get_jwt_identity())
+    trip = Trip.query.get(trip_id)
+
+    if not trip:
+        return jsonify({'error': 'Trip not found'}), 404
+
+    if trip.creator_id != user_id:
+        return jsonify({'error': 'Only creator can invite'}), 403
+
+    data = request.get_json() or {}
+    friend_id = data.get('user_id')
+    remark = data.get('remark', '').strip() or None
+
+    if not friend_id:
+        return jsonify({'error': 'user_id is required'}), 400
+
+    # 检查好友关系
+    from .models import User
+    friend = User.query.get(friend_id)
+    if not friend:
+        return jsonify({'error': 'User not found'}), 404
+
+    # 检查是否已经是参与者
+    if is_participant(trip_id, friend_id):
+        return jsonify({'error': 'User is already a participant'}), 400
+
+    # 发送邀请消息
+    remark_info = f'（备注：{remark}）' if remark else ''
+    msg = Message(
+        user_id=friend_id,
+        sender_id=user_id,
+        type='invitation',
+        title='行程邀请',
+        content=f'{trip.creator.username if trip.creator else "某用户"} 邀请您加入行程「{trip.title}」{remark_info}',
+        related_id=trip_id,
+        remark=remark
+    )
+    db.session.add(msg)
+    db.session.commit()
+
+    return jsonify({'message': 'Invitation sent'}), 200
+
+
+# ==================== 处理邀请（接受/拒绝）====================
+
+@trips_bp.route('/<int:trip_id>/invitations/<int:msg_id>/<action>', methods=['POST'])
+@jwt_required()
+def handle_invitation(trip_id: int, msg_id: int, action: str):
+    """
+    处理邀请（接受或拒绝）
+
+    请求头:
+        Authorization: Bearer <token>
+
+    返回:
+        200: {"message": "Invitation accepted/rejected"}
+        400: {"error": "Invalid action"}
+        403: {"error": "Not your invitation"}
+        404: {"error": "Trip or message not found"}
+    """
+    user_id = int(get_jwt_identity())
+    trip = Trip.query.get(trip_id)
+
+    if not trip:
+        return jsonify({'error': 'Trip not found'}), 404
+
+    msg = Message.query.get(msg_id)
+    if not msg or msg.related_id != trip_id or msg.user_id != user_id:
+        return jsonify({'error': 'Invitation not found'}), 404
+
+    if msg.action_status != 'pending':
+        return jsonify({'error': 'Invitation already processed'}), 400
+
+    if action not in ('accept', 'reject'):
+        return jsonify({'error': 'Invalid action'}), 400
+
+    if action == 'accept':
+        # 检查是否已达最大人数
+        current_count = TripParticipant.query.filter_by(trip_id=trip_id).count()
+        if current_count >= trip.max_participants:
+            return jsonify({'error': 'Trip is full'}), 400
+
+        # 添加为参与者
+        participant = TripParticipant(
+            trip_id=trip_id,
+            user_id=user_id
+        )
+        db.session.add(participant)
+
+        # 更新消息状态
+        msg.action_status = 'approved'
+
+        # 检查是否达到最小参与人数
+        if current_count + 1 >= trip.min_participants:
+            trip.status = 'confirmed'
+
+        # 发送结果消息给邀请人
+        result_msg = Message(
+            user_id=trip.creator_id,
+            sender_id=user_id,
+            type='approval',
+            title='邀请已接受',
+            content=f'{User.query.get(user_id).username} 接受了您的邀请，已加入行程「{trip.title}」',
+            related_id=trip_id
+        )
+        db.session.add(result_msg)
+        db.session.commit()
+
+        return jsonify({'message': 'Invitation accepted'}), 200
+
+    else:  # reject
+        msg.action_status = 'rejected'
+
+        # 发送结果消息给邀请人
+        result_msg = Message(
+            user_id=trip.creator_id,
+            sender_id=user_id,
+            type='approval',
+            title='邀请已拒绝',
+            content=f'{User.query.get(user_id).username} 拒绝了您的邀请，未加入行程「{trip.title}」',
+            related_id=trip_id
+        )
+        db.session.add(result_msg)
+        db.session.commit()
+
+        return jsonify({'message': 'Invitation rejected'}), 200
 
 
 # ==================== 获取申请列表 ====================
@@ -590,7 +749,8 @@ def approve_application(trip_id: int, app_id: int):
         type='approval',
         title='申请已通过',
         content=f'您申请加入的行程「{trip.title}」已通过审批',
-        related_id=trip_id
+        related_id=trip_id,
+        action_status='approved'
     )
     db.session.add(msg)
 
@@ -632,6 +792,19 @@ def reject_application(trip_id: int, app_id: int):
         return jsonify({'error': 'Application already processed'}), 400
 
     application.status = 'rejected'
+
+    # 发送消息给申请人
+    msg = Message(
+        user_id=application.applicant_id,
+        sender_id=user_id,
+        type='approval',
+        title='申请已拒绝',
+        content=f'您申请加入的行程「{trip.title}」已被发起人拒绝',
+        related_id=trip_id,
+        action_status='rejected'
+    )
+    db.session.add(msg)
+
     db.session.commit()
 
     return jsonify({'message': 'Application rejected'}), 200

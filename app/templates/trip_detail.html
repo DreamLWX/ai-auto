@@ -61,6 +61,44 @@
     border: 2px solid #e53935;
     color: #e53935;
 }
+.btn-invite {
+    background: #f3e5f5;
+    border: 2px solid #7b1fa2;
+    color: #7b1fa2;
+}
+.modal-title {
+    font-weight: 600;
+}
+.invite-friend-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+}
+.invite-friend-item:hover {
+    background: #f8f9fa;
+}
+.invite-friend-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    margin-right: 12px;
+}
+.invite-friend-name {
+    flex: 1;
+    font-weight: 500;
+}
+.remark-input {
+    border-radius: 8px;
+    margin-top: 12px;
+}
 </style>
 {% endblock %}
 
@@ -113,6 +151,9 @@
             <a href="{{ url_for('trips.edit_trip_page', trip_id=trip.id) }}" class="btn action-btn btn-edit">
                 编辑行程
             </a>
+            <button class="btn action-btn btn-invite" data-bs-toggle="modal" data-bs-target="#inviteModal">
+                邀请好友
+            </button>
             <form method="POST" action="{{ url_for('trips.delete_trip', trip_id=trip.id) }}" onsubmit="return confirm('确定要删除这个行程吗？');">
                 <button type="submit" class="btn action-btn btn-delete">
                     删除行程
@@ -121,7 +162,11 @@
         </div>
         {% elif can_apply %}
         <div class="trip-info-card">
-            <a href="{{ url_for('trips.apply_trip', trip_id=trip.id) }}" class="btn action-btn btn-apply" onclick="return confirm('确定要申请加入这个行程吗？');">
+            <div class="mb-3">
+                <label class="form-label">申请备注（选填）</label>
+                <textarea class="form-control" id="applyRemark" rows="2" placeholder="简单介绍一下自己或说明申请理由..."></textarea>
+            </div>
+            <a href="{{ url_for('trips.apply_trip', trip_id=trip.id) }}" class="btn action-btn btn-apply" onclick="submitApply(event)">
                 申请加入
             </a>
         </div>
@@ -171,4 +216,103 @@
         </div>
     </div>
 </div>
+
+<!-- 邀请好友模态框 -->
+<div class="modal fade" id="inviteModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">邀请好友加入行程</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">选择好友</label>
+                    <select class="form-select" id="inviteFriendSelect">
+                        <option value="">-- 选择好友 --</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">邀请备注（选填）</label>
+                    <textarea class="form-control" id="inviteRemark" rows="2" placeholder="邀请理由..."></textarea>
+                </div>
+           </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" onclick="sendInvite()">发送邀请</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+//加载好友列表
+async function loadFriends() {
+    try {
+        const res = await fetch('/friends/following');
+        const data = await res.json();
+        const select = document.getElementById('inviteFriendSelect');
+        data.following.forEach(friend => {
+            const option = document.createElement('option');
+            option.value = friend.id;
+            option.textContent = friend.username + (friend.nickname ? ` (${friend.nickname})` : '');
+            select.appendChild(option);
+        });
+    } catch (e) {}
+}
+
+// 提交申请
+function submitApply(event) {
+    const remark = document.getElementById('applyRemark').value.trim();
+    if (remark) {
+        event.preventDefault();
+        fetch('/trips/{{ trip.id }}/apply', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({remark})
+        }).then(res => res.json()).then(data => {
+            if (data.message) {
+                alert('申请已提交');
+                location.reload();
+            }
+        });
+    }
+}
+
+// 发送邀请
+async function sendInvite() {
+    const friendId = document.getElementById('inviteFriendSelect').value;
+    const remark = document.getElementById('inviteRemark').value.trim();
+
+    if (!friendId) {
+        alert('请选择好友');
+        return;
+    }
+
+    try {
+        const res = await fetch('/trips/{{ trip.id }}/invite', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({user_id: parseInt(friendId), remark})
+        });
+        const data = await res.json();
+        if (data.message === 'Invitation sent') {
+            alert('邀请已发送');
+            bootstrap.Modal.getInstance(document.getElementById('inviteModal')).hide();
+        } else {
+            alert(data.error || '发送失败');
+        }
+    } catch (e) {
+        alert('发送失败');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    {% if is_creator %}
+    loadFriends();
+    {% endif %}
+});
+</script>
 {% endblock %}

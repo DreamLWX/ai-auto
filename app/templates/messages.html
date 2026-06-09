@@ -4,126 +4,336 @@
 
 {% block extra_css %}
 <style>
-.page-header {
-    margin-bottom: 24px;
-}
-.page-title {
-    margin: 0;
-    font-weight: 600;
-    font-size: 1.5rem;
-}
-.message-card {
+.messages-container {
+    display: flex;
+    height: calc(100vh - 120px);
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border-radius: 16px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
     overflow: hidden;
 }
-.message-item {
-    padding: 20px;
-    border-bottom: 1px solid #f0f0f0;
-    transition: background 0.2s;
-    cursor: pointer;
-    text-decoration: none;
-    display: block;
-    color: inherit;
+/* 左侧会话列表 */
+.conversations-list {
+    width: 280px;
+    border-right: 1px solid #f0f0f0;
+    overflow-y: auto;
 }
-.message-item:hover {
+.conv-header {
+    padding: 16px;
+    border-bottom: 1px solid #f0f0f0;
+    font-weight: 600;
+    color: #333;
+}
+.conv-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-bottom: 1px solid #f8f8f8;
+}
+.conv-item:hover {
     background: #f8f9fa;
 }
-.message-item.unread {
+.conv-item.active {
     background: #f0f4ff;
 }
-.message-item.unread:hover {
-    background: #e8f0ff;
+.conv-item.unread {
+    background: #fff8f0;
 }
-.message-icon {
-    width: 40px;
-    height: 40px;
+.conv-avatar {
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
+    background: var(--primary-gradient);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 18px;
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    margin-right: 12px;
+    flex-shrink: 0;
 }
-.icon-system { background: #e8f5e9; color: #2e7d32; }
-.icon-application { background: #e3f2fd; color: #1565c0; }
-.icon-approval { background: #fff3e0; color: #e65100; }
-.message-content-wrap {
+.conv-info {
     flex: 1;
+    min-width: 0;
 }
-.message-title {
+.conv-name {
     font-weight: 600;
     color: #333;
-    margin-bottom: 4px;
-}
-.message-preview {
-    color: #666;
     font-size: 14px;
-    margin-bottom: 6px;
+    margin-bottom: 2px;
+}
+.conv-preview {
+    color: #999;
+    font-size: 12px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.message-time {
-    color: #999;
+.conv-time {
+    font-size: 11px;
+    color: #bbb;
+    flex-shrink: 0;
+}
+.unread-badge {
+    background: #ff4757;
+    color: white;
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    margin-left: 8px;
+}
+/* 右侧聊天窗口 */
+.chat-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.chat-header {
+    padding: 16px20px;
+    border-bottom: 1px solid #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.chat-header-name {
+    font-weight: 600;
+    font-size: 16px;
+    color: #333;
+}
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    background: #f8f9fa;
+}
+.msg-bubble {
+    max-width: 70%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    word-wrap: break-word;
+}
+.msg-bubble.sent {
+    background: var(--primary-gradient);
+    color: white;
+    margin-left: auto;
+    border-bottom-right-radius: 4px;
+}
+.msg-bubble.received {
+    background: white;
+    color: #333;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.msg-bubble.system {
+    background: #fff3e0;
+    color: #e65100;
+    max-width: 85%;
+    margin: 0 auto;
+    text-align: center;
+    border-radius: 8px;
+}
+.msg-bubble.remark {
     font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+.msg-time {
+    font-size: 10px;
+    color: #bbb;
+    text-align: right;
+    margin-top: 4px;
+}
+.chat-input-area {
+    padding: 16px 20px;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    gap: 12px;
+}
+.chat-input {
+    flex: 1;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    padding: 10px 16px;
+    font-size: 14px;
+    outline: none;
+}
+.chat-input:focus {
+    border-color: #667eea;
+}
+.send-btn {
+    background: var(--primary-gradient);
+    border: none;
+    border-radius: 20px;
+    padding: 10px 20px;
+    color: white;
+    font-weight: 500;
+}
+/* 空状态 */
+.empty-chat {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    background: #f8f9fa;
 }
 .empty-state {
     text-align: center;
     padding: 60px 20px;
-}
-.empty-icon {
-    font-size: 48px;
-    margin-bottom: 16px;
-}
-.empty-text {
     color: #999;
 }
-.type-badge {
-    font-size: 12px;
+/* 消息类型标签 */
+.msg-type-badge {
+    font-size: 11px;
     padding: 2px 8px;
     border-radius: 10px;
+    margin-right: 8px;
 }
-.badge-system { background: #e8f5e9; color: #2e7d32; }
 .badge-application { background: #e3f2fd; color: #1565c0; }
+.badge-invitation { background: #f3e5f5; color: #7b1fa2; }
 .badge-approval { background: #fff3e0; color: #e65100; }
+.badge-chat { background: #e8f5e9; color: #2e7d32; }
+/* 处理按钮 */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+.action-btn {
+    padding: 6px 16px;
+    border-radius: 16px;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+}
+.action-btn.accept {
+    background: #4caf50;
+    color: white;
+}
+.action-btn.reject {
+    background: #f5f5f5;
+    color: #666;
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1 class="page-title">消息中心</h1>
-</div>
-
-{% if messages %}
-<div class="message-card">
-    {% for msg in messages %}
-    <a href="{{ url_for('messages.mark_read', msg_id=msg.id) }}" class="message-item {% if not msg.is_read %}unread{% endif %}">
-        <div class="d-flex align-items-start gap-3">
-            <div class="message-icon icon-{{ msg.type }}">
-                {% if msg.type == 'system' %}📢{% elif msg.type == 'application' %}📨{% else %}✅{% endif %}
-            </div>
-            <div class="message-content-wrap">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div class="message-title">{{ msg.title }}</div>
-                    <span class="type-badge badge-{{ msg.type }}">
-                        {% if msg.type == 'system' %}系统{% elif msg.type == 'application' %}申请{% else %}审批{% endif %}
-                    </span>
+<div class="messages-container">
+    <!-- 左侧会话列表 -->
+    <div class="conversations-list">
+        <div class="conv-header">消息</div>
+        {% if conversations %}
+            {% for conv in conversations %}
+            <div class="conv-item {% if conv.unread_count > 0 %}unread{% endif %}" onclick="loadConversation({{ conv.user_id }})">
+                <div class="conv-avatar">{{ conv.avatar }}</div>
+                <div class="conv-info">
+                    <div class="conv-name">{{ conv.username }}{% if conv.nickname %} ({{ conv.nickname }}){% endif %}</div>
+                    <div class="conv-preview">{{ conv.last_message }}</div>
                 </div>
-                <div class="message-preview">{{ msg.content }}</div>
-                <div class="message-time">{{ msg.created_at.strftime('%Y-%m-%d %H:%M') if msg.created_at else '' }}</div>
+                <div>
+                    {% if conv.unread_count > 0 %}
+                    <span class="unread-badge">{{ conv.unread_count }}</span>
+                    {% endif %}
+                </div>
             </div>
-            {% if not msg.is_read %}
-            <span class="badge bg-danger">新</span>
-            {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="empty-state">暂无消息</div>
+        {% endif %}
+    </div>
+
+    <!-- 右侧聊天窗口 -->
+    <div class="chat-area">
+        {% if conversation_user %}
+        <div class="chat-header">
+            <div class="chat-header-name">{{ conversation_user.username }}{% if conversation_user.nickname %} ({{ conversation_user.nickname }}){% endif %}</div>
         </div>
-    </a>
-    {% endfor %}
+        <div class="chat-messages" id="chatMessages">
+            {% for msg in messages %}
+            <div class="msg-bubble {% if msg.sender_id == current_user.id %}sent{% else %}received{% endif %} {% if msg.type == 'system' %}system{% endif %}">
+                {% if msg.type != 'chat' %}
+                <span class="msg-type-badge badge-{{ msg.type }}">
+                    {% if msg.type == 'application' %}申请
+                    {% elif msg.type == 'invitation' %}邀请
+                    {% elif msg.type == 'approval' %}审批
+                    {% else %}系统{% endif %}
+                </span>
+                {% endif %}
+                <div>{{ msg.content }}</div>
+                {% if msg.remark %}
+                <div class="msg-bubble remark">备注：{{ msg.remark }}</div>
+                {% endif %}
+                {% if msg.action_status == 'pending' and msg.type in ('application', 'invitation') %}
+                <div class="action-buttons">
+                    <button class="action-btn accept" onclick="handleMessage({{ msg.id }}, 'approve')">同意</button>
+                    <button class="action-btn reject" onclick="handleMessage({{ msg.id }}, 'reject')">拒绝</button>
+                </div>
+                {% elif msg.action_status != 'pending' %}
+                <div class="msg-time" style="color: {% if msg.action_status == 'approved' %}#4caf50{% else %}#999{% endif %}">
+                    {% if msg.action_status == 'approved' %}已同意{% else %}已拒绝{% endif %}
+                </div>
+                {% endif %}
+                <div class="msg-time">{{ msg.created_at.strftime('%H:%M') if msg.created_at else '' }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        <div class="chat-input-area">
+            <input type="text" class="chat-input" id="msgInput" placeholder="输入消息..." onkeypress="if(event.key==='Enter')sendMessage()">
+            <button class="send-btn" onclick="sendMessage()">发送</button>
+        </div>
+        {% else %}
+        <div class="empty-chat">
+            <div>选择好友开始聊天</div>
+        </div>
+        {% endif %}
+    </div>
 </div>
-{% else %}
-<div class="empty-state message-card">
-    <div class="empty-icon">📭</div>
-    <p class="empty-text">暂无消息</p>
-</div>
-{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentConvUserId = null;
+
+function loadConversation(userId) {
+    currentConvUserId = userId;
+    window.location.href = '/messages/conversation/' + userId;
+}
+
+function sendMessage() {
+    const input = document.getElementById('msgInput');
+    const content = input.value.trim();
+    if (!content || !currentConvUserId) return;
+
+    fetch('/messages/api/send', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: currentConvUserId, content})
+    }).then(res => res.json()).then(data => {
+        if (data.msg) {
+            input.value = '';
+            location.reload();
+        }
+    });
+}
+
+function handleMessage(msgId, action) {
+    fetch(`/messages/${msgId}/handle/${action}`, {
+        method: 'POST'
+    }).then(res => res.json()).then(data => {
+        location.reload();
+    });
+}
+
+//滚动到底部
+document.addEventListener('DOMContentLoaded', function() {
+    const chatMsgs = document.getElementById('chatMessages');
+    if (chatMsgs) {
+        chatMsgs.scrollTop = chatMsgs.scrollHeight;
+    }
+});
+</script>
 {% endblock %}

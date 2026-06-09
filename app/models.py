@@ -188,11 +188,13 @@ class Message(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
-    type = db.Column(db.String(20), default='system')  # system / application / approval
+    type = db.Column(db.String(20), default='system')  # system / application / approval / invitation
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
     related_id = db.Column(db.Integer, nullable=True)
     is_read = db.Column(db.Boolean, default=False)
+    action_status = db.Column(db.String(20), default='pending')  # pending / approved / rejected
+    remark = db.Column(db.Text, nullable=True)  # 申请/邀请时的备注
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', foreign_keys=[user_id], backref='messages_received')
@@ -208,6 +210,8 @@ class Message(db.Model):
             'content': self.content,
             'related_id': self.related_id,
             'is_read': self.is_read,
+            'action_status': self.action_status,
+            'remark': self.remark,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'sender': self.sender.to_dict() if self.sender else None
         }

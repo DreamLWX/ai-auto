@@ -1,11 +1,11 @@
 """
 消息系统模块
-提供消息查看、标记已读等功能
+提供消息查看、标记已读、IM会话等功能
 """
 from flask import Blueprint, render_template, redirect, url_for, flash, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from .models import db, Message
+from .models import db, Message, User, Friendship
 
 messages_bp = Blueprint('messages', __name__, url_prefix='/messages')
 
@@ -29,20 +29,161 @@ def get_current_user_id():
     return None
 
 
+def get_conversations(user_id: int):
+    """
+    获取与当前用户有消息往来的会话列表
+    返回：[{user_id, username, nickname, avatar, last_message, unread_count}]
+    """
+    # 获取所有与当前用户相关的消息，提取对话方
+    messages = Message.query.filter_by(user_id=user_id).order_by(Message.created_at.desc()).all()
+
+    conversations = {}
+    for msg in messages:
+        # 确定对话方：消息发送者或接收者
+        if msg.sender_id:
+            other_id = msg.sender_id
+        else:
+            continue # 系统消息不计入对话
+
+        if other_id not in conversations:
+            other_user = User.query.get(other_id)
+            if other_user:
+                conversations[other_id] = {
+                    'user_id': other_id,
+                    'username': other_user.username,
+                    'nickname': other_user.nickname or '',
+                    'avatar': other_user.username[0].upper() if other_user.username else '?',
+                    'last_message': msg.content[:50] if msg.content else '',
+                    'last_time': msg.created_at.isoformat() if msg.created_at else None,
+                    'unread_count': 0
+                }
+
+        # 更新未读数
+        if not msg.is_read:
+            conversations[other_id]['unread_count'] +=1
+
+    return list(conversations.values())
+
+
+def get_messages_with(user_id: int, other_id: int):
+    """获取与指定用户的聊天记录"""
+    # 当前用户发送给对方的消息
+    sent = Message.query.filter_by(user_id=other_id, sender_id=user_id).all()
+    # 对方发送给当前用户的消息
+    received = Message.query.filter_by(user_id=user_id, sender_id=other_id).all()
+
+    all_messages = sent + received
+    all_messages.sort(key=lambda x: x.created_at if x.created_at else 0)
+
+    return all_messages
+
+
 @messages_bp.route('/page', methods=['GET'])
 def view_messages_page():
-    """消息页面（需登录）"""
+    """消息页面（IM风格，需登录）"""
     user_id = get_current_user_id()
     if not user_id:
         flash('请先登录', 'warning')
         return redirect(url_for('auth.login'))
 
-    messages = Message.query.filter_by(user_id=user_id).order_by(Message.created_at.desc()).all()
+    conversations = get_conversations(user_id)
     unread_count = Message.query.filter_by(user_id=user_id, is_read=False).count()
 
+    # 获取好友列表（用于新建对话）
+    following = Friendship.query.filter_by(
+        follower_id=user_id,
+        status='accepted'
+    ).all()
+    friends = []
+    for f in following:
+        friend = User.query.get(f.followed_id)
+        if friend:
+            friends.append({
+                'user_id': friend.id,
+                'username': friend.username,
+                'nickname': friend.nickname or ''
+            })
+
     return render_template('messages.html',
-                           messages=messages,
+                           conversations=conversations,
+                           friends=friends,
                            unread_count=unread_count)
+
+
+@messages_bp.route('/conversation/<int:other_id>', methods=['GET'])
+def get_conversation(other_id: int):
+    """获取与指定用户的聊天记录"""
+    user_id = get_current_user_id()
+    if not user_id:
+        flash('请先登录', 'warning')
+        return redirect(url_for('auth.login'))
+
+    messages = get_messages_with(user_id, other_id)
+    other_user = User.query.get(other_id)
+
+    # 标记已读
+    for msg in messages:
+        if msg.user_id == user_id and not msg.is_read:
+            msg.is_read = True
+    db.session.commit()
+
+    return render_template('messages.html',
+                           conversation_user=other_user,
+                           messages=messages,
+                           conversations=get_conversations(user_id),
+                           friends=[],
+                           unread_count=0)
+
+
+@messages_bp.route('/api/conversations', methods=['GET'])
+@jwt_required()
+def list_conversations_api():
+    """获取会话列表API"""
+    user_id = int(get_jwt_identity())
+    conversations = get_conversations(user_id)
+    return jsonify({'conversations': conversations}), 200
+
+
+@messages_bp.route('/api/with/<int:other_id>', methods=['GET'])
+@jwt_required()
+def list_messages_with_api(other_id: int):
+    """获取与指定用户的聊天记录API"""
+    user_id = int(get_jwt_identity())
+    messages = get_messages_with(user_id, other_id)
+
+    # 标记已读
+    for msg in messages:
+        if msg.user_id == user_id and not msg.is_read:
+            msg.is_read = True
+    db.session.commit()
+
+    return jsonify({'messages': [m.to_dict() for m in messages]}), 200
+
+
+@messages_bp.route('/api/send', methods=['POST'])
+@jwt_required()
+def send_message_api():
+    """发送消息API"""
+    user_id = int(get_jwt_identity())
+    data = request.get_json() or {}
+
+    receiver_id = data.get('user_id')
+    content = data.get('content', '').strip()
+
+    if not receiver_id or not content:
+        return jsonify({'error': 'user_id and content are required'}), 400
+
+    msg = Message(
+        user_id=receiver_id,
+        sender_id=user_id,
+        type='chat',
+        title='新消息',
+        content=content
+    )
+    db.session.add(msg)
+    db.session.commit()
+
+    return jsonify({'message': 'Message sent', 'msg': msg.to_dict()}), 200
 
 
 @messages_bp.route('', methods=['GET'])
@@ -78,3 +219,44 @@ def mark_read(msg_id):
 
     # 重定向回消息页面
     return redirect(url_for('messages.view_messages_page'))
+
+
+@messages_bp.route('/<int:msg_id>/handle/<action>', methods=['POST'])
+@jwt_required()
+def handle_message(msg_id: int, action: str):
+    """处理申请/邀请消息（批准/拒绝）"""
+    user_id = int(get_jwt_identity())
+
+    msg = Message.query.get(msg_id)
+    if not msg or msg.user_id != user_id:
+        return jsonify({'error': 'Message not found'}), 404
+
+    if msg.type not in ('application', 'invitation'):
+        return jsonify({'error': 'Cannot handle this message type'}), 400
+
+    if msg.action_status != 'pending':
+        return jsonify({'error': 'Already processed'}), 400
+
+    if action not in ('approve', 'reject'):
+        return jsonify({'error': 'Invalid action'}), 400
+
+    msg.action_status = 'approved' if action == 'approve' else 'rejected'
+
+    # 如果是接受，处理相关操作
+    if action == 'approve' and msg.related_id:
+        from .trips import is_participant, Trip, TripParticipant
+        trip = Trip.query.get(msg.related_id)
+        if trip:
+            current_count = TripParticipant.query.filter_by(trip_id=trip.id).count()
+            if current_count < trip.max_participants:
+                participant = TripParticipant(
+                    trip_id=trip.id,
+                    user_id=user_id
+                )
+                db.session.add(participant)
+                if current_count + 1 >= trip.min_participants:
+                    trip.status = 'confirmed'
+
+    db.session.commit()
+
+    return jsonify({'message': f'Message {action}d'}), 200
