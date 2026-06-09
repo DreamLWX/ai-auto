@@ -146,7 +146,7 @@ def login():
         return redirect(url_for('auth.login'))
 
     access_token = create_access_token(identity=str(user.id), expires_delta=ACCESS_TOKEN_EXPIRES)
-    resp = redirect(url_for('tasks.list_tasks_page'))
+    resp = redirect(url_for('schedule.view_schedule'))
     set_access_cookies(resp, access_token)
     return resp
 

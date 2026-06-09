@@ -297,6 +297,39 @@
     background: #fff3e0;
     color: #e65100;
 }
+/* 是否回关消息样式 */
+.msg-bubble.follow-request {
+    background: #e3f2fd;
+    color: #1565c0;
+    border-radius: 12px;
+    padding: 12px 16px;
+    max-width: 85%;
+    margin: 0 auto 12px;
+    text-align: center;
+}
+.follow-request .follow-btns {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 10px;
+}
+.follow-request .follow-btn {
+    padding: 6px 20px;
+    border-radius: 16px;
+    font-size: 13px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+}
+.follow-request .follow-btn.yes {
+    background: #1565c0;
+    color: white;
+}
+.follow-request .follow-btn.no {
+    background: white;
+    color: #666;
+    border: 1px solid #ddd;
+}
 </style>
 {% endblock %}
 
@@ -329,6 +362,15 @@
         </div>
         <div class="chat-messages" id="chatMessages">
             {% for msg in messages %}
+            {% if msg.type == 'system' and '是否回关' in msg.content %}
+            <div class="msg-bubble follow-request">
+                <div>{{ msg.content }}</div>
+                <div class="follow-btns">
+                    <button class="follow-btn yes" onclick="acceptFollowRequest({{ msg.id }}, {{ msg.related_id }})">是</button>
+                    <button class="follow-btn no" onclick="rejectFollowRequest({{ msg.id }})">否</button>
+                </div>
+            </div>
+            {% else %}
             <div class="msg-bubble {% if msg.sender_id == current_user.id %}sent{% else %}received{% endif %} {% if msg.type == 'system' %}system{% endif %}">
                 {% if msg.type != 'chat' %}
                 <span class="msg-type-badge badge-{{ msg.type }}">
@@ -354,6 +396,7 @@
                 {% endif %}
                 <div class="msg-time">{{ msg.created_at.strftime('%H:%M') if msg.created_at else '' }}</div>
             </div>
+            {% endif %}
             {% endfor %}
         </div>
         <div class="chat-input-area">
@@ -474,6 +517,30 @@ async function followUser(userId) {
         } else if (data.error) {
             alert(data.error);
         }
+    } catch (e) {
+        alert('操作失败');
+    }
+}
+
+// 接受回关请求（点击"是"）
+async function acceptFollowRequest(msgId, fromUserId) {
+    try {
+        const res = await fetch(`/friends/${fromUserId}/follow`, { method: 'POST' });
+        const data = await res.json();
+        // 同时接受对方发来的关注请求
+        fetch(`/friends/${fromUserId}/accept`, { method: 'POST' }).then(() => {
+            location.reload();
+        });
+    } catch (e) {
+        alert('操作失败');
+    }
+}
+
+// 拒绝回关请求（点击"否"）
+async function rejectFollowRequest(msgId) {
+    try {
+        await fetch(`/messages/${msgId}/handle/reject`, { method: 'POST' });
+        location.reload();
     } catch (e) {
         alert('操作失败');
     }
