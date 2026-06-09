@@ -265,20 +265,22 @@ async function loadFriends() {
 
 // 提交申请
 function submitApply(event) {
+    event.preventDefault();
     const remark = document.getElementById('applyRemark').value.trim();
-    if (remark) {
-        event.preventDefault();
-        fetch('/trips/{{ trip.id }}/apply', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({remark})
-        }).then(res => res.json()).then(data => {
-            if (data.message) {
-                alert('申请已提交');
-                location.reload();
-            }
-        });
-    }
+    fetch('/trips/{{ trip.id }}/apply', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({remark: remark || null})
+    }).then(res => res.json()).then(data => {
+        if (data.message) {
+            alert('申请已提交');
+            location.reload();
+        } else if (data.error) {
+            alert(data.error);
+        }
+    }).catch(() => {
+        alert('申请失败');
+    });
 }
 
 // 发送邀请
