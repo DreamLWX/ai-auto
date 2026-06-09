@@ -226,7 +226,7 @@
             <p class="trip-description">{{ (trip.public_content or trip.description or '')|truncate(100) }}</p>
             <div class="trip-footer">
                 <div class="trip-participants">
-                    <span class="participant-count">{{ trip.participants|length if trip.participants else 0 }}/{{ trip.max_participants }}</span>
+                    <span class="participant-count">{{ trip.participant_count if trip.participant_count is not none else 0 }}/{{ trip.max_participants }}</span>
                     <span class="text-muted">人</span>
                 </div>
                 <a href="{{ url_for('trips.trip_detail_page', trip_id=trip.id) }}" class="view-btn">

@@ -94,6 +94,41 @@ def get_schedule_items(user_id: int):
                 'description': trip.description or ''
             })
 
+    # 获取用户创建的行程（也显示在日程中）
+    created_trips = Trip.query.filter_by(creator_id=user_id).all()
+    for trip in created_trips:
+        if trip and trip.deadline:
+            # 检查是否已经通过参与关系添加过了（避免重复）
+            existing_ids = [item['id'] for item in items if item['type'] != 'task']
+            if trip.id in existing_ids:
+                continue
+
+            day = trip.deadline.weekday()
+            hour = trip.deadline.hour if hasattr(trip.deadline, 'hour') else 12
+            participant_count = TripParticipant.query.filter_by(trip_id=trip.id).count()
+
+            if trip.is_private:
+                item_type = 'trip_private'
+            elif participant_count >= trip.max_participants:
+                item_type = 'trip_full'
+            else:
+                item_type = 'trip_public'
+
+            items.append({
+                'id': trip.id,
+                'title': trip.title,
+                'type': item_type,
+                'day': day,
+                'hour': hour,
+                'time': trip.deadline.strftime('%H:%M') if hasattr(trip.deadline, 'strftime') else '12:00',
+                'date': trip.deadline.date().isoformat() if hasattr(trip.deadline, 'date') else trip.deadline.isoformat()[:10],
+                'completed': trip.status == 'confirmed',
+                'deadline': trip.deadline.isoformat() if trip.deadline else None,
+                'participant_count': participant_count,
+                'max_participants': trip.max_participants,
+                'description': trip.description or ''
+            })
+
     return items
 
 

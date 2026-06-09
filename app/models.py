@@ -180,3 +180,34 @@ class TripParticipant(db.Model):
             'joined_at': self.joined_at.isoformat() if self.joined_at else None,
             'user': self.user.to_dict() if self.user else None
         }
+
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
+    type = db.Column(db.String(20), default='system')  # system / application / approval
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    related_id = db.Column(db.Integer, nullable=True)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', foreign_keys=[user_id], backref='messages_received')
+    sender = db.relationship('User', foreign_keys=[sender_id], backref='messages_sent')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'sender_id': self.sender_id,
+            'type': self.type,
+            'title': self.title,
+            'content': self.content,
+            'related_id': self.related_id,
+            'is_read': self.is_read,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'sender': self.sender.to_dict() if self.sender else None
+        }

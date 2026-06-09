@@ -51,12 +51,14 @@ def create_app(config: dict = None) -> Flask:
     from .friendships import friends_bp
     from .trips import trips_bp
     from .schedule import schedule_bp
+    from .messages import messages_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
     app.register_blueprint(friends_bp)
     app.register_blueprint(trips_bp)
     app.register_blueprint(schedule_bp)
+    app.register_blueprint(messages_bp)
 
     from .auth import inject_current_user
     app.context_processor(inject_current_user)

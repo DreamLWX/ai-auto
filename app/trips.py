@@ -7,7 +7,7 @@ from flask import Blueprint, request, jsonify, render_template, redirect, url_fo
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import or_, and_
 
-from .models import db, Trip, TripApplication, TripParticipant, Friendship, Task
+from .models import db, Trip, TripApplication, TripParticipant, Friendship, Task, Message
 
 trips_bp = Blueprint('trips', __name__, url_prefix='/trips')
 
@@ -457,6 +457,19 @@ def apply_trip(trip_id: int):
         if current_count + 1 >= trip.min_participants:
             trip.status = 'confirmed'
 
+        # 发送消息给行程创建者
+        from .models import User
+        applicant = User.query.get(user_id)
+        msg = Message(
+            user_id=trip.creator_id,
+            sender_id=user_id,
+            type='application',
+            title='新的行程参与',
+            content=f'{applicant.username if applicant else "某用户"} 加入了您的行程「{trip.title}」',
+            related_id=trip_id
+        )
+        db.session.add(msg)
+
         db.session.commit()
         return jsonify({'message': 'Joined trip successfully'}), 200
 
@@ -467,6 +480,20 @@ def apply_trip(trip_id: int):
         status='pending'
     )
     db.session.add(application)
+
+    # 发送消息给行程创建者
+    from .models import User
+    applicant = User.query.get(user_id)
+    msg = Message(
+        user_id=trip.creator_id,
+        sender_id=user_id,
+        type='application',
+        title='新的行程申请',
+        content=f'{applicant.username if applicant else "某用户"} 申请加入您的行程「{trip.title}」',
+        related_id=trip_id
+    )
+    db.session.add(msg)
+
     db.session.commit()
 
     return jsonify({'message': 'Application submitted'}), 200
@@ -555,6 +582,17 @@ def approve_application(trip_id: int, app_id: int):
     participant_count = TripParticipant.query.filter_by(trip_id=trip_id).count()
     if participant_count >= trip.min_participants:
         trip.status = 'confirmed'
+
+    # 发送消息给申请人
+    msg = Message(
+        user_id=application.applicant_id,
+        sender_id=user_id,
+        type='approval',
+        title='申请已通过',
+        content=f'您申请加入的行程「{trip.title}」已通过审批',
+        related_id=trip_id
+    )
+    db.session.add(msg)
 
     db.session.commit()
 
@@ -783,9 +821,26 @@ def trip_detail_page(trip_id: int):
         return redirect(url_for('trips.list_trips_page'))
 
     participants = TripParticipant.query.filter_by(trip_id=trip_id).all()
+
+    # 判断是否为创建者
+    is_creator = (trip.creator_id == user_id)
+
+    # 判断是否可以申请（不是创建者且未参与）
+    can_apply = not is_creator and not is_participant(trip_id, user_id)
+
+    # 判断是否已申请（待审批中）
+    has_applied = TripApplication.query.filter_by(
+        trip_id=trip_id,
+        applicant_id=user_id,
+        status='pending'
+    ).first() is not None
+
     return render_template('trip_detail.html',
                            trip=trip,
-                           participants=participants)
+                           participants=participants,
+                           is_creator=is_creator,
+                           can_apply=can_apply,
+                           has_applied=has_applied)
 
 
 @trips_bp.route('/mine/page', methods=['GET'])

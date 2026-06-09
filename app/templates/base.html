@@ -118,6 +118,15 @@
                             </a>
                         </li>
                         <li>
+                            <a class="dropdown-item" href="{{ url_for('messages.view_messages_page') }}">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="me-2">
+                                    <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                                </svg>
+                                消息
+                                <span id="msg-badge" class="badge bg-danger ms-2" style="display:none;">0</span>
+                            </a>
+                        </li>
+                        <li>
                             <a class="dropdown-item" href="#" onclick="showSettingsModal(); return false;">
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" class="me-2">
                                     <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
@@ -208,6 +217,20 @@
             });
             toastList.forEach(toast => toast.show());
         });
+
+        // 更新未读消息数
+        async function updateMsgCount() {
+            try {
+                const res = await fetch('/messages/unread_count');
+                const data = await res.json();
+                const badge = document.getElementById('msg-badge');
+                if (badge && data.unread_count > 0) {
+                    badge.textContent = data.unread_count;
+                    badge.style.display = '';
+                }
+            } catch (e) {}
+        }
+        updateMsgCount();
     </script>
     {% block extra_js %}{% endblock %}
 </body>

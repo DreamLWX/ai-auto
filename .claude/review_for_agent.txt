@@ -1,0 +1,111 @@
+# AI-Auto 代码审查结果 - 需要修复
+
+[@后端代码姬一号！](mention://agent/6af9c278-7fca-4005-a314-bf00ca518f06)
+
+代码审查完成，发现以下问题需要修复：
+
+## 🔴 P0 - 会导致运行时错误
+
+### 1. `trips.py` 调用未定义函数（NameError）
+
+**位置**: `trips.py` 第 548、578、624 行
+
+```python
+def list_trips_page():
+    user_id = get_current_user_id_from_request()  # ← 函数在第 639 行定义！
+```
+
+`get_current_user_id_from_request()` 在文件第 639 行才定义，但在第 548、578、624 行就被调用了。**这会导致 `NameError`**。
+
+**修复方式**: 将该函数移到文件顶部（friends_bp 定义之后），或移动到 trips.py 文件开头。
+
+---
+
+### 2. `schedule.py` 第 48 行 `due_date.hour` 属性错误
+
+```python
+hour = task.due_date.hour if hasattr(task.due_date, 'hour') else 12
+```
+
+`due_date` 是 `Date` 类型（只有日期，没有时间），不是 `Datetime`。`hasattr(task.due_date, 'hour')` **永远返回 `False`**，`hour` 总是被设为 `12`。
+
+**修复方式**: 由于 tasks 没有具体时间，改用 `task.due_date.weekday()` 作为 day 索引，hour 可以固定为 12 或移除 hour 字段。
+
+---
+
+## 🟡 P1 - 性能问题
+
+### 3. `models.py` 中 `Trip.is_hidden()` 和 `to_dict()` N+1 查询
+
+每个 trip 的 `is_hidden()` 和 `to_dict()` 都会触发数据库查询：
+
+```python
+def is_hidden(self):
+    participant_count = TripParticipant.query.filter_by(trip_id=self.id).count()  # DB 查询
+
+def to_dict(self, include_hidden=False):
+    'participant_count': TripParticipant.query.filter_by(trip_id=self.id).count()  # 又查一次
+```
+
+当渲染行程列表时，100 条行程会产生 200+ 次 DB 查询。
+
+**修复方式**: 在 `trips.py` 列表查询时用 `joinedload` 预加载 TripParticipant，或使用缓存的 participant_count。
+
+---
+
+## 🟡 P2 - 逻辑问题
+
+### 4. `trips.py` 重复查询 participant_count
+
+```python
+# 第 356 行
+current_count = TripParticipant.query.filter_by(trip_id=trip_id).count()
+# ...
+# 第 367 行
+participant_count = TripParticipant.query.filter_by(trip_id=trip_id).count()  # 相同查询重复执行
+```
+
+**修复方式**: 复用第一次查询结果。
+
+---
+
+### 5. `friendships.py` 第 42-47 行 - 关注判断不完整
+
+```python
+existing = Friendship.query.filter_by(
+    follower_id=current_user_id,
+    followed_id=user_id
+).first()
+if existing:
+    return jsonify({'message': 'Already following'}), 200
+```
+
+如果用户已关注但状态是 `pending`（如之前被拒绝），也会返回 "Already following"，但实际上用户应该能重新发起关注。
+
+**修复方式**: 检查 `status='accepted'` 或允许 pending 状态重新 follow。
+
+---
+
+## 🟢 小问题
+
+### 6. `schedule.py` 第 42 行未使用变量
+
+```python
+today = datetime.utcnow().date()  # 定义后从未使用
+```
+
+删除即可。
+
+---
+
+## 修复优先级
+
+| 优先级 | 问题 | 影响 |
+|--------|------|------|
+| P0 | trips.py 未定义函数 | 运行时报错 |
+| P0 | schedule.py due_date.hour | 运行时报错 |
+| P1 | N+1 查询 | 性能问题 |
+| P2 | 重复查询、关注逻辑 | 逻辑问题 |
+| P3 | 未使用变量 | 代码整洁 |
+
+请修复后重新 review。
