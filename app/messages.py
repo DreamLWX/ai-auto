@@ -10,6 +10,37 @@ from .models import db, Message, User, Friendship
 messages_bp = Blueprint('messages', __name__, url_prefix='/messages')
 
 
+def get_or_create_todo_user():
+    """获取或创建 TODO 系统用户"""
+    todo_user = User.query.filter_by(username='TODO').first()
+    if not todo_user:
+        # 创建一个不带密码的系统用户（仅用于发送消息）
+        todo_user = User(
+            username='TODO',
+            password_hash='',
+            nickname='系统助手'
+        )
+        db.session.add(todo_user)
+        db.session.commit()
+    return todo_user
+
+
+def send_system_message(user_id: int, content: str, msg_type: str = 'system', related_id: int = None):
+    """发送系统消息（由 TODO 用户发送）"""
+    todo_user = get_or_create_todo_user()
+    msg = Message(
+        user_id=user_id,
+        sender_id=todo_user.id,
+        type=msg_type,
+        title='系统通知',
+        content=content,
+        related_id=related_id
+    )
+    db.session.add(msg)
+    db.session.commit()
+    return msg
+
+
 def get_current_user_id():
     """从请求中获取当前用户ID（支持 JWT 或 session）"""
     from flask import session
@@ -95,9 +126,16 @@ def view_messages_page():
         status='accepted'
     ).all()
     friends = []
+    # 添加 TODO 系统用户到好友列表首位
+    todo_user = get_or_create_todo_user()
+    friends.append({
+        'user_id': todo_user.id,
+        'username': todo_user.username,
+        'nickname': todo_user.nickname or ''
+    })
     for f in following:
         friend = User.query.get(f.followed_id)
-        if friend:
+        if friend and friend.id != todo_user.id:
             friends.append({
                 'user_id': friend.id,
                 'username': friend.username,
@@ -133,9 +171,16 @@ def get_conversation(other_id: int):
         status='accepted'
     ).all()
     friends = []
+    # 添加 TODO 系统用户到好友列表首位
+    todo_user = get_or_create_todo_user()
+    friends.append({
+        'user_id': todo_user.id,
+        'username': todo_user.username,
+        'nickname': todo_user.nickname or ''
+    })
     for f in following:
         friend = User.query.get(f.followed_id)
-        if friend:
+        if friend and friend.id != todo_user.id:
             friends.append({
                 'user_id': friend.id,
                 'username': friend.username,
@@ -274,11 +319,12 @@ def handle_message(msg_id: int, action: str):
                 if current_count + 1 >= trip.min_participants:
                     trip.status = 'confirmed'
 
-    # 发送结果通知给申请人/被邀请人
+    # 发送结果通知给申请人/被邀请人（由 TODO 系统用户发送）
     from .models import User
     trip = Trip.query.get(msg.related_id) if msg.related_id else None
     trip_title = trip.title if trip else '行程'
     actor = User.query.get(user_id)
+    todo_user = get_or_create_todo_user()
 
     if action == 'approve':
         result_content = f'您{"申请" if msg.type == "application" else "被邀请"}的行程「{trip_title}」已被 {actor.username if actor else "某用户"} 批准'
@@ -287,7 +333,7 @@ def handle_message(msg_id: int, action: str):
 
     result_msg = Message(
         user_id=target_user_id,
-        sender_id=user_id,
+        sender_id=todo_user.id,
         type='approval',
         title='申请结果' if msg.type == 'application' else '邀请结果',
         content=result_content,

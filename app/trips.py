@@ -251,11 +251,11 @@ def create_trip():
 
 # ==================== 获取行程详情 ====================
 
-@trips_bp.route('/<int:trip_id>', methods=['GET'])
+@trips_bp.route('/api/<int:trip_id>', methods=['GET'])
 @jwt_required()
 def get_trip(trip_id: int):
     """
-    获取行程详情
+    获取行程详情（API）
 
     请求头:
         Authorization: Bearer <token>

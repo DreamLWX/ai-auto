@@ -7,7 +7,7 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from sqlalchemy import or_, and_
 
-from .models import db, User, Friendship
+from .models import db, User, Friendship, Message
 
 friends_bp = Blueprint('friends', __name__, url_prefix='/friends')
 
@@ -55,13 +55,27 @@ def follow_user(user_id: int):
     if stale:
         db.session.delete(stale)
 
-    # 创建关注请求
+       # 创建关注请求
     friendship = Friendship(
         follower_id=current_user_id,
         followed_id=user_id,
         status='pending'
     )
     db.session.add(friendship)
+
+    # 发送系统消息给被关注者（由 TODO 用户发送）
+    current_user = User.query.get(current_user_id)
+    from .messages import get_or_create_todo_user
+    todo_user = get_or_create_todo_user()
+    msg = Message(
+        user_id=user_id,
+        sender_id=todo_user.id,
+        type='system',
+        title='新的关注请求',
+        content=f'{current_user.username if current_user else "某用户"} 关注了您，是否回关？',
+        related_id=current_user_id
+    )
+    db.session.add(msg)
     db.session.commit()
 
     return jsonify({'message': 'Follow request sent'}), 200
