@@ -218,6 +218,85 @@
     background: #f5f5f5;
     color: #666;
 }
+/* 添加好友按钮 */
+.add-friend-btn {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    border: none;
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(102,126,234,0.3);
+    transition: transform 0.2s;
+}
+.add-friend-btn:hover {
+    transform: scale(1.1);
+}
+.conversations-list {
+    position: relative;
+}
+/* 搜索结果 */
+.search-result-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+}
+.search-result-item:hover {
+    background: #f8f9fa;
+}
+.search-result-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--primary-gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    margin-right: 10px;
+}
+.search-result-info {
+    flex: 1;
+}
+.search-result-name {
+    font-weight: 500;
+    font-size: 14px;
+}
+.search-result-status {
+    font-size: 11px;
+    color: #999;
+}
+.search-result-action {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    border: none;
+    cursor: pointer;
+}
+.search-result-action.follow {
+    background: var(--primary-gradient);
+    color: white;
+}
+.search-result-action.following {
+    background: #e0e0e0;
+    color: #999;
+    cursor: default;
+}
+.search-result-action.pending {
+    background: #fff3e0;
+    color: #e65100;
+}
 </style>
 {% endblock %}
 
@@ -239,6 +318,7 @@
         {% else %}
             <div class="empty-state">暂无好友</div>
         {% endif %}
+        <button class="add-friend-btn" data-bs-toggle="modal" data-bs-target="#addFriendModal" title="添加好友">+</button>
     </div>
 
     <!-- 右侧聊天窗口 -->
@@ -287,6 +367,26 @@
         {% endif %}
     </div>
 </div>
+
+<!-- 添加好友模态框 -->
+<div class="modal fade" id="addFriendModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">添加好友</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <input type="text" class="form-control" id="friendSearchInput" placeholder="输入用户名搜索..." oninput="searchFriends()">
+                </div>
+                <div id="searchResults" style="max-height: 300px; overflow-y: auto;">
+                    <div class="text-muted text-center py-3">输入用户名搜索</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -321,6 +421,62 @@ function handleMessage(msgId, action) {
     }).then(res => res.json()).then(data => {
         location.reload();
     });
+}
+
+// 搜索好友
+let searchTimer = null;
+function searchFriends() {
+    clearTimeout(searchTimer);
+    const query = document.getElementById('friendSearchInput').value.trim();
+    if (!query) {
+        document.getElementById('searchResults').innerHTML = '<div class="text-muted text-center py-3">输入用户名搜索</div>';
+        return;
+    }
+    searchTimer = setTimeout(async () => {
+        try {
+            const res = await fetch(`/friends/search?q=${encodeURIComponent(query)}`);
+            const data = await res.json();
+            const container = document.getElementById('searchResults');
+            if (data.users.length === 0) {
+                container.innerHTML = '<div class="text-muted text-center py-3">未找到用户</div>';
+                return;
+            }
+            container.innerHTML = data.users.map(user => {
+                let btnHtml = '';
+                if (user.status === 'none') {
+                    btnHtml = `<button class="search-result-action follow" onclick="followUser(${user.id})">关注</button>`;
+                } else if (user.status === 'pending') {
+                    btnHtml = `<button class="search-result-action pending">待审核</button>`;
+                } else {
+                    btnHtml = `<button class="search-result-action following">已关注</button>`;
+                }
+                return `<div class="search-result-item">
+                    <div class="search-result-avatar">${user.username[0].toUpperCase()}</div>
+                    <div class="search-result-info">
+                        <div class="search-result-name">${user.username}${user.nickname ? ` (${user.nickname})` : ''}</div>
+                    </div>
+                    ${btnHtml}
+                </div>`;
+            }).join('');
+        } catch (e) {
+            console.error('搜索失败', e);
+        }
+    }, 300);
+}
+
+// 关注用户
+async function followUser(userId) {
+    try {
+        const res = await fetch(`/friends/${userId}/follow`, { method: 'POST' });
+        const data = await res.json();
+        if (data.message === 'Follow request sent' || data.message === 'Already following') {
+            searchFriends(); // 刷新列表
+        } else if (data.error) {
+            alert(data.error);
+        }
+    } catch (e) {
+        alert('操作失败');
+    }
 }
 
 //滚动到底部

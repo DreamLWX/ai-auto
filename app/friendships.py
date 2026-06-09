@@ -301,3 +301,49 @@ def list_following():
             result.append(user.to_dict())
 
     return jsonify({'following': result}), 200
+
+
+# ==================== 搜索用户 ====================
+
+@friends_bp.route('/search', methods=['GET'])
+@jwt_required()
+def search_users():
+    """
+    搜索用户（通过用户名）
+
+    请求头:
+        Authorization: Bearer <token>
+
+    查询参数:
+        q: 搜索关键词（用户名）
+
+    返回:
+        200: {"users": [...]}
+    """
+    current_user_id = int(get_jwt_identity())
+    query = request.args.get('q', '').strip()
+
+    if not query:
+        return jsonify({'users': []}), 200
+
+    # 模糊搜索用户名
+    users = User.query.filter(
+        User.username.like(f'%{query}%'),
+        User.id != current_user_id
+    ).limit(20).all()
+
+    result = []
+    for user in users:
+        # 检查是否已经关注
+        existing = Friendship.query.filter_by(
+            follower_id=current_user_id,
+            followed_id=user.id
+        ).first()
+        result.append({
+            'id': user.id,
+            'username': user.username,
+            'nickname': user.nickname or '',
+            'status': existing.status if existing else 'none'
+        })
+
+    return jsonify({'users': result}), 200
