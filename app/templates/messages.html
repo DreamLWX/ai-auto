@@ -552,6 +552,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (chatMsgs) {
         chatMsgs.scrollTop = chatMsgs.scrollHeight;
     }
+    // 从URL中提取currentConvUserId（如果是对话页面）
+    const match = window.location.pathname.match(/\/messages\/conversation\/(\d+)/);
+    if (match) {
+        currentConvUserId = parseInt(match[1]);
+    }
 });
 </script>
 {% endblock %}
